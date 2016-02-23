@@ -26,7 +26,7 @@ def rgb2ycbcr_coefs(dw, cw=None):
 datapath_latency = 8
 
 
-@DecorateModule(InsertCE)
+@CEInserter()
 class RGB2YCbCrDatapath(Module):
     def __init__(self, rgb_w, ycbcr_w, coef_w):
         self.sink = sink = Record(rgb_layout(rgb_w))
@@ -172,7 +172,7 @@ def ycbcr2rgb_coefs(dw, cw=None):
 datapath_latency = 4
 
 
-@DecorateModule(InsertCE)
+@CEInserter()
 class YCbCr2RGBDatapath(Module):
     def __init__(self, ycbcr_w, rgb_w, coef_w):
         self.sink = sink = Record(ycbcr444_layout(ycbcr_w))

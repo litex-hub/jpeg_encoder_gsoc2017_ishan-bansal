@@ -3,9 +3,9 @@
 from litex.gen import *
 from litex.soc.interconnect.stream import *
 
-from gateware.csc.common import *
+from litejpeg.core.common import *
 
-@DecorateModule(InsertCE)
+@CEInserter()
 class YCbCr444to422Datapath(Module):
     """YCbCr 444 to 422
 
@@ -69,12 +69,11 @@ class YCbCr444to422(PipelinedActor, Module):
     def __init__(self, dw=8):
         self.sink = sink = Sink(EndpointDescription(ycbcr444_layout(dw), packetized=True))
         self.source = source = Source(EndpointDescription(ycbcr422_layout(dw), packetized=True))
-        PipelinedActor.__init__(self, datapath_latency)
-        self.latency = self.datapath.latency
 
         # # #
 
         self.submodules.datapath = YCbCr444to422Datapath(dw)
+        PipelinedActor.__init__(self, self.datapath.latency)
         self.comb += [
             self.datapath.start.eq(self.sink.stb & sink.sop),
             self.datapath.ce.eq(self.sink.stb & self.pipe_ce),
@@ -86,7 +85,7 @@ class YCbCr444to422(PipelinedActor, Module):
 
 
 
-@DecorateModule(InsertCE)
+@CEInserter()
 class YCbCr422to444Datapath(Module):
     """YCbCr 422 to 444
 
@@ -132,12 +131,11 @@ class YCbCr422to444(PipelinedActor, Module):
     def __init__(self, dw=8):
         self.sink = sink = Sink(EndpointDescription(ycbcr422_layout(dw), packetized=True))
         self.source = source = Source(EndpointDescription(ycbcr444_layout(dw), packetized=True))
-        PipelinedActor.__init__(self, datapath_latency)
-        self.latency = self.datapath.latency
 
         # # #
 
         self.submodules.datapath = YCbCr422to444Datapath(dw)
+        PipelinedActor.__init__(self, self.datapath.latency)
         self.comb += [
             self.datapath.start.eq(sink.stb & sink.sop),
             self.datapath.ce.eq(sink.stb & self.pipe_ce)
