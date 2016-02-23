@@ -26,3 +26,6 @@ def ycbcr444_layout(dw):
 
 def ycbcr422_layout(dw):
     return [("y", dw), ("cb_cr", dw)]
+
+def block_layout(dw):
+    return [("data", dw)]
