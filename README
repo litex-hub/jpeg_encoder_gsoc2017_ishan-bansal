@@ -14,7 +14,11 @@
 
 [> Intro
 ---------
-TODO
+LiteJPEG aims to create a FPGA JPEG Encoder/Decoder.
+JPEG headers will be generated/manipulated by a softcore CPU
+(LM32 or RISC-V) to keep things simple.
+
+This is a work in progress.
 
 [> Features
 ------------
@@ -22,6 +26,7 @@ TODO
 
 [> Possible improvements
 -------------------------
+TODO
 
 [> Getting started
 -------------------
