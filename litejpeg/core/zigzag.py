@@ -25,8 +25,8 @@ for i in range(64):
 
 class ZigZag(Module):
     def __init__(self):
-        self.sink = Sink(block_layout(12), packetized=True)
-        self.source = Source(block_layout(12), packetized=True)
+        self.sink = sink = Sink(EndpointDescription(block_layout(12), packetized=True))
+        self.source = source = Source(EndpointDescription(block_layout(12), packetized=True))
 
         # # #
 
@@ -95,13 +95,13 @@ class ZigZag(Module):
         read_count = Signal(6)
         self.sync += \
             If(read_clr,
-                read.eq(0)
+                read_count.eq(0)
             ).Elif(read_inc,
                 read_count.eq(read_count + 1)
             )
 
         self.comb += [
-            zigzag_read_port.adr.eq(read_count)
+            zigzag_read_port.adr.eq(read_count),
             data_read_port.adr.eq(zigzag_read_port.dat_r), # XXX check latency
             data_read_port.adr[-1].eq(read_sel),
             source.data.eq(data_read_port.dat_r)
@@ -121,6 +121,7 @@ class ZigZag(Module):
             source.sop.eq(read_count == 0),
             source.eop.eq(read_count == 63),
             If(source.ack,
+            	read_inc.eq(1),
                 If(source.eop,
                     NextState("IDLE")
                 )
