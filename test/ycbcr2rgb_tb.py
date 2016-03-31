@@ -25,28 +25,35 @@ class TB(Module):
             self.logger.sink.data[0:8].eq(self.ycbcr2rgb.source.b)
         ]
 
-    def gen_simulation(self, selfp):
-        # convert image using ycbcr2rgb model
-        raw_image = RAWImage(ycbcr2rgb_coefs(8), "lena.png", 64)
-        raw_image.rgb2ycbcr()
-        raw_image.ycbcr2rgb_model()
-        raw_image.save("lena_ycbcr2rgb_reference.png")
+def main_generator(dut):
+    # convert image using ycbcr2rgb model
+    raw_image = RAWImage(ycbcr2rgb_coefs(8), "lena.png", 64)
+    raw_image.rgb2ycbcr()
+    raw_image.ycbcr2rgb_model()
+    raw_image.save("lena_ycbcr2rgb_reference.png")
 
-        for i in range(16):
-            yield
+    for i in range(16):
+        yield
 
-        # convert image using ycbcr2rgb implementation
-        raw_image = RAWImage(ycbcr2rgb_coefs(8), "lena.png", 64)
-        raw_image.rgb2ycbcr()
-        raw_image.pack_ycbcr()
-        packet = Packet(raw_image.data)
-        self.streamer.send(packet)
-        yield from self.logger.receive()
-        raw_image.set_data(self.logger.packet)
-        raw_image.unpack_rgb()
-        raw_image.save("lena_ycbcr2rgb.png")
+    # convert image using ycbcr2rgb implementation
+    raw_image = RAWImage(ycbcr2rgb_coefs(8), "lena.png", 64)
+    raw_image.rgb2ycbcr()
+    raw_image.pack_ycbcr()
+    packet = Packet(raw_image.data)
+    dut.streamer.send(packet)
+    yield from dut.logger.receive()
+    raw_image.set_data(dut.logger.packet)
+    raw_image.unpack_rgb()
+    raw_image.save("lena_ycbcr2rgb.png")
 
 
 if __name__ == "__main__":
-    from litex.gen.sim.generic import run_simulation
-    run_simulation(TB(), ncycles=8192, vcd_name="my.vcd", keep_files=True)
+    tb = TB()
+    generators = {"sys" : [main_generator(tb)]}
+    generators = {
+        "sys" :   [main_generator(tb),
+                   tb.streamer.generator(),
+                   tb.logger.generator()]
+    }
+    clocks = {"sys": 10}
+    run_simulation(tb, generators, clocks, vcd_name="sim.vcd")

@@ -1,4 +1,6 @@
+#!/usr/bin/env python3
 from litex.gen import *
+
 from litex.soc.interconnect.stream import *
 from litex.soc.interconnect.stream_sim import *
 
@@ -19,13 +21,20 @@ class TB(Module):
         ]
 
 
-    def gen_simulation(self, selfp):
-        packet = Packet(zigzag_order)
-        for i in range(4):
-            self.streamer.send(packet)
-            yield from self.logger.receive()
-            print(self.logger.packet)
+def main_generator(dut):
+    packet = Packet(zigzag_order)
+    for i in range(4):
+        dut.streamer.send(packet)
+        yield from dut.logger.receive()
+        print(dut.logger.packet)
 
 if __name__ == "__main__":
-    from litex.gen.sim.generic import run_simulation
-    run_simulation(TB(), ncycles=8192, vcd_name="my.vcd", keep_files=True)
+    tb = TB()
+    generators = {"sys" : [main_generator(tb)]}
+    generators = {
+        "sys" :   [main_generator(tb),
+                   tb.streamer.generator(),
+                   tb.logger.generator()]
+    }
+    clocks = {"sys": 10}
+    run_simulation(tb, generators, clocks, vcd_name="sim.vcd")
