@@ -9,9 +9,9 @@ from common import *
 
 class TB(Module):
     def __init__(self):
-        self.submodules.streamer = PacketStreamer(EndpointDescription([("data", 24)], packetized=True))
+        self.submodules.streamer = PacketStreamer(EndpointDescription([("data", 24)]))
         self.submodules.rgb2ycbcr = RGB2YCbCr()
-        self.submodules.logger = PacketLogger(EndpointDescription([("data", 24)], packetized=True))
+        self.submodules.logger = PacketLogger(EndpointDescription([("data", 24)]))
 
         self.comb += [
         	Record.connect(self.streamer.source, self.rgb2ycbcr.sink, leave_out=["data"]),

@@ -9,9 +9,9 @@ from common import *
 
 class TB(Module):
     def __init__(self):
-        self.submodules.streamer = PacketStreamer(EndpointDescription([("data", 24)], packetized=True))
+        self.submodules.streamer = PacketStreamer(EndpointDescription([("data", 24)]))
         self.submodules.zigzag = ZigZag()
-        self.submodules.logger = PacketLogger(EndpointDescription([("data", 24)], packetized=True))
+        self.submodules.logger = PacketLogger(EndpointDescription([("data", 24)]))
 
         self.comb += [
             self.streamer.source.connect(self.zigzag.sink),

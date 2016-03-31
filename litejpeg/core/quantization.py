@@ -8,8 +8,8 @@ from litejpeg.core.common import *
 
 class Quantization(PipelinedActor, Module, AutoCSR):
     def __init__(self, init):
-        self.sink = Sink(block_layout(12), packetized=True)
-        self.source = Source(block_layout(12), packetized=True)
+        self.sink = stream.Endpoint(block_layout(12))
+        self.source = stream.Endpoint(block_layout(12))
         PipelinedActor.__init__(self, 3)
 
         self._we = CSR()

@@ -25,8 +25,8 @@ for i in range(64):
 
 class ZigZag(Module):
     def __init__(self):
-        self.sink = sink = Sink(EndpointDescription(block_layout(12), packetized=True))
-        self.source = source = Source(EndpointDescription(block_layout(12), packetized=True))
+        self.sink = sink = stream.Endpoint(EndpointDescription(block_layout(12)))
+        self.source = source = stream.Endpoint(EndpointDescription(block_layout(12)))
 
         # # #
 
@@ -67,7 +67,7 @@ class ZigZag(Module):
             data_write_port.adr.eq(write_count),
             data_write_port.adr[-1].eq(write_sel),
             data_write_port.dat_w.eq(sink.data),
-            data_write_port.we.eq(sink.stb & sink.ack)
+            data_write_port.we.eq(sink.valid & sink.ready)
         ]
 
         self.submodules.write_fsm = write_fsm = FSM(reset_state="IDLE")
@@ -78,8 +78,8 @@ class ZigZag(Module):
             )
         )
         write_fsm.act("WRITE",
-            sink.ack.eq(1),
-            If(sink.stb,
+            sink.ready.eq(1),
+            If(sink.valid,
                 If(write_count == 63,
                     write_swap.eq(1),
                     NextState("IDLE")
@@ -117,12 +117,11 @@ class ZigZag(Module):
             )
         )
         read_fsm.act("READ",
-            source.stb.eq(1),
-            source.sop.eq(read_count == 0),
-            source.eop.eq(read_count == 63),
-            If(source.ack,
+            source.valid.eq(1),
+            source.last.eq(read_count == 63),
+            If(source.ready,
             	read_inc.eq(1),
-                If(source.eop,
+                If(source.last,
                     NextState("IDLE")
                 )
             )
