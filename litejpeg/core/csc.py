@@ -38,6 +38,8 @@ class RGB2YCbCrDatapath(Module):
 
         # delay rgb signals
         rgb_delayed = [sink]
+        #rgb_delayed = [Record(rgb_layout(rgb_w))]
+        #print(rgb_delayed)
         for i in range(datapath_latency):
             rgb_n = Record(rgb_layout(rgb_w))
             for name in ["r", "g", "b"]:
@@ -81,6 +83,7 @@ class RGB2YCbCrDatapath(Module):
         self.sync += [
             yraw.eq(carg_plus_cbbg[coef_w:] + rgb_delayed[3].g)
         ]
+        #print(len(rgb_delayed[3]))
 
         # stage 5
         # r - yraw
@@ -137,7 +140,9 @@ class RGB2YCbCr(PipelinedActor, Module):
 
         # # #
 
+    
         self.submodules.datapath = RGB2YCbCrDatapath(rgb_w, ycbcr_w, coef_w)
+        
         self.comb += self.datapath.ce.eq(self.pipe_ce)
         for name in ["r", "g", "b"]:
             self.comb += getattr(self.datapath.sink, name).eq(getattr(sink, name))
@@ -169,7 +174,7 @@ def ycbcr2rgb_coefs(dw, cw=None):
         "dcoef": coef(1/cc, xcoef_w)
     }
 
-datapath_latency = 4
+#datapath_latency = 4
 
 
 @CEInserter()

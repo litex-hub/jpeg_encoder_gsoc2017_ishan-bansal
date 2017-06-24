@@ -110,7 +110,6 @@ class ZigZag(Module):
         self.submodules.read_fsm = read_fsm = FSM(reset_state="IDLE")
         read_fsm.act("IDLE",
             read_clr.eq(1),
-            read_clr.eq(1),
             If(read_sel == write_sel,
                 read_swap.eq(1),
                 NextState("READ")

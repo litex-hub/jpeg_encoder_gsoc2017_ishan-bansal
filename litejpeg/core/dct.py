@@ -66,7 +66,46 @@ class DCT1D(Module):
             result[4].eq(s3_vector[1]),
             result[0].eq(s3_vector[0])
         ]
+datapath_latency = 4
 
-class DCT(Module):
-    def __init__(self):
-        pass # TODO
+@CEInserter()
+class DCTDatapath(Module):
+    def __init__(self, dw, dct_block):
+        self.sink = sink = Record(dct_block_layout(dw,dct_block))
+        self.source = source = Record(dct_block_layout(dw,dct_block))
+
+         # # #
+
+        dct_matrix_1d = Array(Array(Signal(dw) for a in range(8)) for b in range(8))
+        dct_matrix_2d = Array(Array(Signal(dw) for a in range(8)) for b in range(8))
+        dct_delayed = [sink]
+        for i in range(datapath_latency):
+            dct_n = Record(dct_block_layout(dw,dct_block))
+            for i in range(dct_block):
+                name = "dct_" + str(i)
+                self.sync += getattr(dct_n, name).eq(getattr(dct_delayed[-1], name))
+            dct_delayed.append(dct_n)
+
+
+
+
+class DCT(PipelinedActor,Module):
+    def __init__(self,dw=12, dct_block=64):
+        self.sink = sink = stream.Endpoint(EndpointDescription(dct_block_layout(dw,dct_block)))
+        self.source = source = stream.Endpoint(EndpointDescription(dct_block_layout(dw,dct_block)))
+        PipelinedActor.__init__(self, datapath_latency)
+
+        # # #
+
+
+        self.submodules.datapath = DCTDatapath(dw,dct_block)
+        self.comb += self.datapath.ce.eq(self.pipe_ce)
+        #self.comb +=
+
+        for i in range(dct_block):
+            name = "dct_" + str(i)
+            self.comb += getattr(self.datapath.sink, name).eq(getattr(sink, name))
+
+        for i in range(dct_block):
+            name = "dct_" + str(i)
+            self.comb += getattr(source, name).eq(getattr(self.datapath.source, name))
