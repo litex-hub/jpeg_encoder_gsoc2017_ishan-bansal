@@ -5,6 +5,17 @@ from litex.soc.interconnect.stream import *
 
 from litejpeg.core.common import *
 
+"""
+Rearranging the value of the YCbCr matrix
+-----------------------------------------
+This module will rearrange the values of the matrix in such a way that
+the number of zeros obtained should be maximum.
+This will help in the better compression at the time Run Length Encoder.
+
+The order of arrangement is been provided within the zigzag_order as that
+will decide which value is been replaced by which one. 
+"""
+
 zigzag_order = [
  0,  1,  5,  6, 14, 15, 27, 28,
  2,  4,  7, 13, 16, 26, 29, 42,
@@ -15,7 +26,7 @@ zigzag_order = [
 21, 34, 37, 47, 50, 56, 59, 61,
 35, 36, 48, 49, 57, 58, 62, 63]
 
-
+# Marking the order in which the values are need to be arranged.
 zigzag_rom = [0]*64
 for i in range(64):
     for j in range(64):
@@ -24,16 +35,75 @@ for i in range(64):
 
 
 class ZigZag(Module):
+    """
+    This will take the values for the zigzag module.
+
+    The values are been taken by in the form of serial input and stored in the
+    memory named data_mem.
+    Than another zigzag_mem is present which contains the order in which the 
+    values need to be rearranged.
+    The data when read from the memory are than taken in order for zigzag_mem
+    hence read in that form.
+
+    """
     def __init__(self):
         self.sink = sink = stream.Endpoint(EndpointDescription(block_layout(12)))
         self.source = source = stream.Endpoint(EndpointDescription(block_layout(12)))
 
         # # #
 
+        """
+        zigzag_mem : 64 blocks
+        Stores the data in the form in which the data needs to be rearranged.
+
+        Attributes:
+        -----------
+        zigzag_read_port : Read the signal from the memory location as per
+                           the address in the zigzag_mem.adr .
+
+        """
         zigzag_mem = Memory(8, 64, init=zigzag_rom)
         zigzag_read_port = zigzag_mem.get_port(async_read=True)
         self.specials += zigzag_mem, zigzag_read_port
 
+        """
+        data_mem : 128 blocks
+        Stores the data from the serial input and read the data from the memory
+        when needed.
+
+        Attributes:
+        -----------
+        data_write_port : Write whatever in the ``sink.data`` into the memory
+                          with address stored in data_write_port.adr
+        
+        data_read_port :  Read the data from the memory as per the address stored 
+                          in data_mem.adr
+        
+        write_sel : Decide wheather the port have to read or write through the memory.
+
+        read_sel : Decide wheather the port have to read or write through the memory.
+
+        write_swap : Change the value of the ``write_sel``.
+
+        read_swap : Change the value of the ``read_sel``.
+
+        read_count : Determine the address when the data is to read in the
+                     memory increment from 0 to 63 and than again turn to 0.
+
+        write_count : Determine the address when the data is to written in the 
+                      memory increment from 0 to 63 and than again comes to 0.
+
+        read_clr : Clears the ``read_count`` to 0.
+
+        write_clr : Clears the ``write_count`` to 0.
+
+        read_inc : Will increment the ``read_count`` on every positive edge of the clock.
+
+        write_inc : Will increment the ``write_count`` on every positive edge of the
+                    clock.
+        """
+
+        # intialise the memory named as data_mem.
         data_mem = Memory(12, 64*2)
         data_write_port = data_mem.get_port(write_capable=True)
         data_read_port = data_mem.get_port(async_read=True)
@@ -70,6 +140,13 @@ class ZigZag(Module):
             data_write_port.we.eq(sink.valid & sink.ready)
         ]
 
+        """ 
+        IDLE State.
+
+        Depending on the value of the read_sel and write_sel decide wheather the 
+        next state will be either read or write.
+        Will clear the value of ``write_count`` to be 0.
+        """
         self.submodules.write_fsm = write_fsm = FSM(reset_state="IDLE")
         write_fsm.act("IDLE",
             write_clr.eq(1),
@@ -77,6 +154,14 @@ class ZigZag(Module):
                 NextState("WRITE")
             )
         )
+        """
+        Write State
+
+        Will increament the value of the write_count at every positive edge of the
+        clock cycle till 63 and write the data into the memory as per the data 
+        from the ``sink.data`` and when the value reaches 63 the state again changes to 
+        that of the IDLE state.
+        """
         write_fsm.act("WRITE",
             sink.ready.eq(1),
             If(sink.valid,
@@ -102,11 +187,12 @@ class ZigZag(Module):
 
         self.comb += [
             zigzag_read_port.adr.eq(read_count),
-            data_read_port.adr.eq(zigzag_read_port.dat_r), # XXX check latency
+            data_read_port.adr.eq(zigzag_read_port.dat_r),
             data_read_port.adr[-1].eq(read_sel),
             source.data.eq(data_read_port.dat_r)
         ]
 
+        # IDLE state
         self.submodules.read_fsm = read_fsm = FSM(reset_state="IDLE")
         read_fsm.act("IDLE",
             read_clr.eq(1),
@@ -115,6 +201,14 @@ class ZigZag(Module):
                 NextState("READ")
             )
         )
+        """
+        READ state
+
+        Will increament the value of the read_count at every positive edge of the
+        clock cycle till 63 and read the data from the memory, giving it to the 
+        ``source.data`` as input and when the value reaches 63 the state again changes to 
+        that of the IDLE state.
+        """
         read_fsm.act("READ",
             source.valid.eq(1),
             source.last.eq(read_count == 63),

@@ -1,9 +1,14 @@
-# Quantization
-# In this quantization module, we are dividing our matrix with certain values as per the quantization table to increase the number of
-# zeros that is used in the compression in the next stages.
-# However instead of dividing which creates a problem because of non-storage of decimal values as such in a signal,
-# We are going to multiply the values with the inverse of the values within the matrix.
-# And give the output for the next stage.
+"""
+Quantization Module
+===================
+
+In this quantization module, we are dividing our matrix with certain values as per the quantization table to increase the number of
+zeros that is used in the compression in the next stages.
+However instead of dividing which creates a problem because of non-storage of decimal values as such in a signal,
+We are going to multiply the values with the inverse of the values within the matrix.
+And give the output for the next stage.
+
+"""
 
 from litex.gen import *
 from litex.soc.interconnect.stream import *
@@ -33,12 +38,17 @@ class Quantization(PipelinedActor, Module):
         self.source = source = stream.Endpoint(EndpointDescription(block_layout(12)))
 
 
-        # Quantization ROM
-        # Storing values of the quantization tables.
-        # Since as per our discussion above we are storing the inverse of the values in the qunatization table.
-        # However that lead to a floating point number which is not a migen value.
-        # Hence we are storing (2**16)/quantization value.
-        # This provide us appropriate precision for the process.
+        """
+        Quantization ROM
+        ================
+
+        Storing values of the quantization tables.
+        We are storing the inverse of the values in the qunatization table.
+        However that lead to a floating point number which is not a migen value.
+        Hence we are storing (2**16)/quantization value.
+        This provide us appropriate precision for the process.
+        
+        """
         inverse = Memory(16,2**6)
         invese_write_port = inverse.get_port(write_capable=True)
         inverse_read_port = inverse.get_port(async_read=True)
@@ -132,6 +142,9 @@ class Quantization(PipelinedActor, Module):
 
         self.comb += [
             # Take an input and store it in data_temp_signed along with the sign.
+            # Sign because we obtain floating point value after the division 
+            # process, hence the sign will help in rounding off to the nearest 
+            # neighbour.
             data_temp_signed.eq(data_mem[read_count]),
 
             # Getting wheather it is a positive or negative integer.
