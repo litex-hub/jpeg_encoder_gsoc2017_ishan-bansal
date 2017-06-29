@@ -11,6 +11,15 @@ from model.enc_frame import zigzag
 from model.enc_frame import quantize
 
 class RAWImage:
+    """
+    This class particular used for the RGB2YCbCr module as for dividing the image into
+    64*64 pixels and getting the values of R, G and B corressponding to each pixel.
+    Than converting the RCG matrix into the YCbCr matrix which are further 
+    used for the compression.
+    Than again converting the YCbCr to RGB matrix to again convert the new image with
+    the original image.
+
+    """
     def __init__(self, coefs, filename=None, size=None):
         self.r = None
         self.g = None
@@ -31,6 +40,9 @@ class RAWImage:
 
 
     def open(self, filename):
+        """
+        Storing values in the r, g and b matrix.
+        """
         img = Image.open(filename)
         if self.size is not None:
             img = img.resize((self.size, self.size), Image.ANTIALIAS)
@@ -63,6 +75,10 @@ class RAWImage:
 
 
     def pack_rgb(self):
+        """
+        Converting the RGB into the data for the transfer into the 
+        RGB2YCbCr module.
+        """
         self.data = []
         for i in range(self.length):
             data = (self.r[i] & 0xff) << 16
@@ -73,6 +89,10 @@ class RAWImage:
 
 
     def pack_ycbcr(self):
+        """
+        Converting the YCbCr into the data for the transfer into the
+        YCbCr2RGB module.
+        """
         self.data = []
         for i in range(self.length):
             data = (self.y[i] & 0xff) << 16
@@ -83,6 +103,9 @@ class RAWImage:
 
 
     def unpack_rgb(self):
+        """
+        Converting the data into the RGB matrix.
+        """
         self.r = []
         self.g = []
         self.b = []
@@ -94,6 +117,7 @@ class RAWImage:
 
 
     def unpack_ycbcr(self):
+        """ Converting the data into the YCbCr matrix"""
         self.y = []
         self.cb = []
         self.cr = []
@@ -174,6 +198,8 @@ class DCTData:
         self.length = ds
         self.width = dw
 
+    # Converting DCT matrix into the serial data for providing input to
+    # the DCT module.
     def pack_dct(self):
         self.data = []
         for i in range(self.length):
@@ -181,12 +207,16 @@ class DCTData:
             self.data.append(data)
         return self.data[-1]
 
+    # Taking input from the output of the DCT module and convert it into
+    # the DCT matrix.
     def unpack_dct(self,output):
         self.out_data = []
         for i in range( len(output)/self.width ):
             data = (output >> self.width*i) & 2**self.width
             self.out_data.append( data )
 
+    # Converting DCT matrix into the serial data for providing input to
+    # the DCT module.
     def pack_dct_new(self):
         self.data = 0
         for i in range(self.length):
@@ -195,6 +225,8 @@ class DCTData:
         return self.data
 
 
+    # Taking input from the output of the DCT module and convert it into
+    # the DCT matrix.
     def unpack_dct_new(self,output):
         self.out_data = []
         for i in range(self.length):
@@ -202,17 +234,22 @@ class DCTData:
             self.out_data.append( data )
         print(self.out_data)
 
+    # Set the data in the required format for the printing.
     def setdata(self,data):
         self.data = data[57:]
         for i in range(64):
             temp = (self.data[i]^4095)+1
             if(temp < self.data[i]):
                 self.data[i] = -1*temp;
-            #for j in range(12):
-            #    self.data[i][j].eq(self.data[i][j]^self.data[i][11])
         print(self.data)
 
 class ZZData:
+    """
+    In order for the testing purpose ``zigzag_input`` input is been taken
+    to check the functionality of the implemented module by comparing the 
+    results which we get from both the reference and the implemented
+    module.
+    """
     def __init__(self):
         self.zigzag_input=[140, 144, 147, 140, 140, 155, 179, 175,
                      144, 152, 140, 147, 140, 148, 167, 179,
@@ -226,7 +263,23 @@ class ZZData:
         self.zigzag_output = zigzag(self.zigzag_input)
 
 class Quantizer:
+    """
+    The Quantization table for this purpose are taken from the reference as follows:
+    "https://www.dfrws.org/sites/default/files/session-files/
+    paper-using_jpeg_quantization_tables_to_identify_imagery_processed_by_software.pdf"
+    which includes the one for the luminance and other for the chrominium, since the
+    eye are less sensible for the chrominium part, hence contains large values in the 
+    case of chrominium table which generate more number of zeros in the chrominium part
+    for the purpose of maximum compression without much effect in the quality of the 
+    image.
+
+    ``quantizer_input`` is taken as a reference for testing the implemented module from
+    ``wikipedia`` along with the expected output i.e. ``qunatizer_output`` for comparing
+    with the result we get from the reference and implemented modules.
+
+    """
     def __init__(self):
+        # Input to the quantization table.
         self.quantizer_input = [-415, -33, -58,  35,  58, -51, -15, -12,
                                    5, -34,  49,  18,  27,  1 , -5 ,   3,
                                  -46,  14,  80, -35, -50,  19,   7, -18,
@@ -236,6 +289,7 @@ class Quantizer:
                                   19, -28,  -2, -26,  -2,   7, -44, -21,
                                   18,  25, -12, -44,  35,  48, -37,  -3]
 
+        # Luminance quantization table.
         self.quantizer_table = [16, 11, 10, 16, 24, 40, 51, 61,
                                 12, 12, 14, 19, 26, 58, 60, 55,
                                 14, 13, 16, 24, 40, 57, 69, 56,
@@ -245,6 +299,7 @@ class Quantizer:
                                 49, 64, 78, 87,103,121,120,101,
                                 72, 92, 95, 98,112,100,103, 99]
 
+        # Chrominium quantization table.
         self.quantizer_cr = [17, 18, 24, 47, 99, 99, 99, 99,
                                  18, 21, 26, 66, 99, 99, 99, 99,
                                  24, 26, 56, 99, 99, 99, 99, 99,
@@ -254,10 +309,12 @@ class Quantizer:
                                  99, 99, 99, 99, 99, 99, 99, 99,
                                  99, 99, 99, 99, 99, 99, 99, 99]
 
+        # Output getting after the quantization module.
         self.quantize_output_ref = quantize(self.quantizer_input,self.quantizer_table)
 
         self.quantizer_output2_ref = quantize(self.quantizer_input,self.quantizer_cr) 
 
+        # Expected output.
         self.quantizer_output = [ -26, -3, -6,  2,  2, -1, 0, 0,
                                     0, -3,  4,  1,  1,  0, 0, 0,
                                    -3,  1,  5, -1, -1,  0, 0, 0,
@@ -268,13 +325,13 @@ class Quantizer:
                                     0,  0,  0,  0,  0,  0, 0, 0]
 
     def setdata(self,data):
+        # Converting the data from the Quantization module into the prescibed
+        # format.
         self.data = data
         for i in range(64):
             temp = (self.data[i]^4095)+1
             if(temp < self.data[i]):
                 self.data[i] = -1*temp;
-            #for j in range(12):
-            #    self.data[i][j].eq(self.data[i][j]^self.data[i][11])
         print(self.data)
 
             
