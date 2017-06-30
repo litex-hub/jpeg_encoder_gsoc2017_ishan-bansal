@@ -6,18 +6,32 @@ from litejpeg.core.new_dct6 import *
 
 from common import DCTData
 
-# dw = size of the block in the metrix
-# ds = number of blocks in the matrix
+"""
+Test Bench for the DCT module. The result from the implemented module are
+compared with the reference module to compare the accuracy.
+
+Parameters:
+-----------
+
+dw : int
+     size of the block of the matrix.
+
+ds : int
+     number of blocks in the matrix.
+
+omit_table : ds blocks with the size of each block to be dw bits
+     Store the values for the DCT matrix.
+"""
+
 dw = 12
 ds = 64
-# table with 64 values of the form dct_1,dct_2,....,dct_63
+
 omit_table = ["dct_" + str(i) for i in range(ds)]
 
 class TB(Module):
     def __init__(self):
 
-        #attaching input and output of the test bench with that of the DCT module.
-        #add brackets to the Endpoint description
+        # Attaching input and output of the test bench with that of the DCT module.
         self.submodules.streamer = PacketStreamer(EndpointDescription( [("data", dw)] ))
         self.submodules.DCT = DCT()
         self.submodules.logger = PacketLogger(EndpointDescription( [("data", dw)]))
@@ -47,8 +61,6 @@ def main_generator(dut):
     print("Output data by the DCT Module")
     print(model.output_dct_model) 
 
-    for i in range(8):
-        yield
 
     # Implementation on Hardware.
     model2 = DCTData(ds,dw)
@@ -60,7 +72,7 @@ def main_generator(dut):
     print("Output of the DCT Module Implemented:")
     model2.setdata(dut.logger.packet)
 
-
+# Getting the main function.
 if __name__ == "__main__":
     tb = TB()
     generators = {"sys": [main_generator(tb)]}

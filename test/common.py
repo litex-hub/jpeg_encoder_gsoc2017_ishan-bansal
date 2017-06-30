@@ -177,7 +177,27 @@ class RAWImage:
         return self.r, self.g, self.b
 
 class DCTData:
+    """
+    This class is been made for the testing of the DCT module. As for this 
+    purpose the input and expected output of the DCT matrix are been taken from 
+    the reference as follows:
+    "http://www.iosrjournals.org/iosr-jece/papers/Vol5-Issue4/H0545156.pdf?id=4310"
+    and the same input is given to the reference and the implemented module and
+    the output is compared with that of the expected output for checking the accuracy
+    of the implemented module.
+
+    Parameters:
+    -----------
+    ds : int
+    Determine the number of blocks in the matrix.
+
+    dw : int
+    Determine the number of bits required to store individual value.
+
+    """
     def __init__(self,ds,dw):
+
+        # Reference input
         self.input_dct = [140, 144, 147, 140, 140, 155, 179, 175,
                           144, 152, 140, 147, 140, 148, 167, 179,
                           152, 155, 136, 167, 163, 162, 152, 172,
@@ -186,6 +206,8 @@ class DCTData:
                           147, 167, 140, 155, 155, 140, 136, 162,
                           136, 156, 123, 167, 162, 144, 140, 147,
                           148, 155, 136, 155, 152, 147, 147, 136]
+        
+        # Expected output
         self.output_dct = [186, -18,  15,  -9,   23,  -9, -14, 19,
                             21, -34,  26,  -9,  -11,  11,  14,  7,
                            -10, -24,  -2,   6,  -18,   3, -20, -1,
@@ -194,7 +216,10 @@ class DCTData:
                              4,  -2, -18,   8,    8,  -4,   1, -7,
                              9,   1,  -3,   4,   -1,  -7,  -1, -2,
                              0,  -8,  -2,   2,    1,   4,  -6,  0]
+        
+        # Output after passing the input to the reference module.
         self.output_dct_model = dct(self.input_dct)
+        
         self.length = ds
         self.width = dw
 
