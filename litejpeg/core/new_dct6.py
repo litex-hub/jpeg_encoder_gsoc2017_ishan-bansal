@@ -74,14 +74,7 @@ class DCTDatapath(Module):
 
         # intialise the vectors for 8 blocks at a time that will undergo DCT processing
         # at a time.
-        vector0 = Array(Signal(dw) for a in range(8))
-        vector1 = Array(Signal(dw) for a in range(8))
-        vector2 = Array(Signal(dw) for a in range(8))
-        vector3 = Array(Signal(dw) for a in range(8))
-        vector4 = Array(Signal(dw) for a in range(8))
-        vector5 = Array(Signal(dw) for a in range(8))
-        vector6 = Array(Signal(dw) for a in range(8))
-        vector7 = Array(Signal(dw) for a in range(8))
+        vector = Array(Array(Signal(dw) for a in range(8)) for b in range(8))
 
         vector_out = Array(Signal(dw) for a in range(64))
         vector2_out = Array(Signal(dw) for a in range(64))
@@ -102,81 +95,37 @@ class DCTDatapath(Module):
 
         # Assigning vectors 8 blocks for which the DCT conversion has to take place.
         for j in range(8):
-            name="dct_"+str(j)
-            self.sync += vector0[j].eq(getattr(dct_delayed[-1],name)-128)
-            name="dct_"+str(8+j)
-            self.sync += vector1[j].eq(getattr(dct_delayed[-1],name)-128)
-            name="dct_"+str(16+j)
-            self.sync += vector2[j].eq(getattr(dct_delayed[-1],name)-128)
-            name="dct_"+str(24+j)
-            self.sync += vector3[j].eq(getattr(dct_delayed[-1],name)-128)
-            name="dct_"+str(32+j)
-            self.sync += vector4[j].eq(getattr(dct_delayed[-1],name)-128)
-            name="dct_"+str(40+j)
-            self.sync += vector5[j].eq(getattr(dct_delayed[-1],name)-128)
-            name="dct_"+str(48+j)
-            self.sync += vector6[j].eq(getattr(dct_delayed[-1],name)-128)
-            name="dct_"+str(54+j)
-            self.sync += vector7[j].eq(getattr(dct_delayed[-1],name)-128)
-                
+            for y in range(8):
+                name = "dct_"+str((8*y)+j)
+                self.sync += vector[y][j].eq(getattr(dct_delayed[-1],name)-128)           
 
         # Assign DCT to every block to get the result.
-        self.dct1D(vector0,dw,vector_out[0:8])
-        self.dct1D(vector1,dw,vector_out[8:16])
-        self.dct1D(vector2,dw,vector_out[16:24])
-        self.dct1D(vector3,dw,vector_out[24:32])
-        self.dct1D(vector4,dw,vector_out[32:40])
-        self.dct1D(vector5,dw,vector_out[40:48])
-        self.dct1D(vector6,dw,vector_out[48:56])
-        self.dct1D(vector7,dw,vector_out[56:64])
+        for w in range(8):
+            self.dct1D(vector[w],dw,vector_out[8*w:(w+1)*8])
 
         # Now intialising the vectors for applying the DCT function on the transpose matrix.
-        vector2_0 = Array(Signal(dw) for a in range(8))
-        vector2_1 = Array(Signal(dw) for a in range(8))
-        vector2_2 = Array(Signal(dw) for a in range(8))
-        vector2_3 = Array(Signal(dw) for a in range(8))
-        vector2_4 = Array(Signal(dw) for a in range(8))
-        vector2_5 = Array(Signal(dw) for a in range(8))
-        vector2_6 = Array(Signal(dw) for a in range(8))
-        vector2_7 = Array(Signal(dw) for a in range(8))
+        vector2 = Array(Array(Signal(dw) for a in range(8)) for b in range(8))
 
         # Assigning values for DCT on the transpose matrix.
         for a in range(8):
-            self.sync += vector2_0[a].eq(vector_out[8*a])
-            self.sync += vector2_1[a].eq(vector_out[(8*a)+1])
-            self.sync += vector2_2[a].eq(vector_out[(8*a)+2])
-            self.sync += vector2_3[a].eq(vector_out[(8*a)+3])
-            self.sync += vector2_4[a].eq(vector_out[(8*a)+4])
-            self.sync += vector2_5[a].eq(vector_out[(8*a)+5])
-            self.sync += vector2_6[a].eq(vector_out[(8*a)+6])
-            self.sync += vector2_7[a].eq(vector_out[(8*a)+7])
+            for i in range(8):
+                self.sync += vector2[i][a].eq(vector_out[8*a+i])
 
-        self.dct1D(vector2_0,dw,vector2_out[0:8])
-        self.dct1D(vector2_1,dw,vector2_out[8:16])
-        self.dct1D(vector2_2,dw,vector2_out[16:24])
-        self.dct1D(vector2_3,dw,vector2_out[24:32])
-        self.dct1D(vector2_4,dw,vector2_out[32:40])
-        self.dct1D(vector2_5,dw,vector2_out[40:48])
-        self.dct1D(vector2_6,dw,vector2_out[48:56])
-        self.dct1D(vector2_7,dw,vector2_out[56:64])
+        for r in range(8):
+            self.dct1D(vector2[r],dw,vector2_out[r*8:(r+1)*8])
+
 
         # Assigning the result to the final matrix.
         for p in range(8):
-            self.sync += vector2final_out[8*p].eq(vector2_out[p])
-            self.sync += vector2final_out[8*p+1].eq(vector2_out[p+8])
-            self.sync += vector2final_out[8*p+2].eq(vector2_out[p+16])
-            self.sync += vector2final_out[8*p+3].eq(vector2_out[p+24])
-            self.sync += vector2final_out[8*p+4].eq(vector2_out[p+32])
-            self.sync += vector2final_out[8*p+5].eq(vector2_out[p+40])
-            self.sync += vector2final_out[8*p+6].eq(vector2_out[p+48])
-            self.sync += vector2final_out[8*p+7].eq(vector2_out[p+56])
+            for g in range(8):
+                self.sync += vector2final_out[8*p+g].eq(vector2_out[p+(8*g)])
 
         # Dividing the resultant matrix by 8.
         for r in range(64):
             self.sync += vector2final_outdivide[r].eq(vector2final_out[r]>>3)
-            self.sync += vector2final_outdivide[r][9].eq(vector2final_outdivide[r][8])
-            self.sync += vector2final_outdivide[r][10].eq(vector2final_outdivide[r][8])
-            self.sync += vector2final_outdivide[r][11].eq(vector2final_outdivide[r][8])
+            for t in range(3):
+                self.sync += vector2final_outdivide[r][9+t].eq(vector2final_outdivide[r][8])
+            
 
         # Assigning the final matrix to the output.
         for m in range(64):
