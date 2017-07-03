@@ -134,6 +134,21 @@ class DCTDatapath(Module):
         
  
 
+    def Butterfly(self,i1,i2,i3,i4):
+        """
+        Necessary addition and subtration operations.
+        """
+        self.sync += i3.eq(i1+i2)
+        self.sync += i4.eq(i1-i2)
+
+    def Carry(self,carry_vector,carry_maxbit):
+        """
+        Allocating sign to the signal.
+        """
+        for u in range(12):
+            self.sync += carry_vector[u+12].eq(carry_maxbit)
+
+
     def dct1D(self,vector1d,dw,vector1d_out):
 
         """
@@ -158,23 +173,17 @@ class DCTDatapath(Module):
 
         vector8 = Array(Signal(dw) for a in range(8))
 
-        self.sync += vector8[3].eq(vector1d[3]+vector1d[4])
-        self.sync += vector8[4].eq(vector1d[3]-vector1d[4])
-        self.sync += vector8[2].eq(vector1d[2]+vector1d[5])
-        self.sync += vector8[5].eq(vector1d[2]-vector1d[5])
-        self.sync += vector8[1].eq(vector1d[1]+vector1d[6])
-        self.sync += vector8[6].eq(vector1d[1]-vector1d[6])
-        self.sync += vector8[0].eq(vector1d[0]+vector1d[7])
-        self.sync += vector8[7].eq(vector1d[0]-vector1d[7])
+        self.Butterfly(vector1d[3],vector1d[4],vector8[3],vector8[4])
+        self.Butterfly(vector1d[2],vector1d[5],vector8[2],vector8[5])
+        self.Butterfly(vector1d[1],vector1d[6],vector8[1],vector8[6])
+        self.Butterfly(vector1d[0],vector1d[7],vector8[0],vector8[7])
 
         #2nd stage
 
         vector9 = Array(Signal(dw) for a in range(8))
 
-        self.sync += vector9[0].eq(vector8[0]+vector8[3])
-        self.sync += vector9[3].eq(vector8[0]-vector8[3])
-        self.sync += vector9[1].eq(vector8[1]+vector8[2])
-        self.sync += vector9[2].eq(vector8[1]-vector8[2])
+        self.Butterfly(vector8[0],vector8[3],vector9[0],vector9[3])
+        self.Butterfly(vector8[1],vector8[2],vector9[1],vector9[2])
 
         """
         This migen doesn't support floating values for signals. Hence the following
@@ -216,8 +225,7 @@ class DCTDatapath(Module):
         # bit extension by deciding wheather the most significant bit is 1 or 0 
         vector8_4block_Maxbit = Signal(1)
         self.sync += vector8_4block_Maxbit.eq(vector8[4][11])
-        for r in range(12):
-            self.sync += vector8_4block[r+12].eq(vector8_4block_Maxbit)
+        self.Carry(vector8_4block,vector8_4block_Maxbit)
         self.sync += vector8_4block[0:12].eq(vector8[4])
         # multiplication by cosine
         vector84Aftercos = Signal(2*dw)
@@ -233,8 +241,7 @@ class DCTDatapath(Module):
         vector8_7block = Signal(2*dw)
         vector8_7block_Maxbit = Signal(1)
         self.sync += vector8_7block_Maxbit.eq(vector8[7][11])
-        for r in range(12):
-            self.sync += vector8_7block[r+12].eq(vector8_7block_Maxbit)
+        self.Carry(vector8_7block,vector8_7block_Maxbit)
         self.sync += vector8_7block[0:12].eq(vector8[7])
         vector87Aftercos = Signal(2*dw)
         vector87Finalcos = Signal(dw)
@@ -248,8 +255,7 @@ class DCTDatapath(Module):
         vector8_5block = Signal(2*dw)
         vector8_5block_Maxbit = Signal(1)
         self.sync += vector8_5block_Maxbit.eq(vector8[5][11])
-        for r in range(12):
-            self.sync += vector8_5block[r+12].eq(vector8_5block_Maxbit)
+        self.Carry(vector8_5block,vector8_5block_Maxbit)
         self.sync += vector8_5block[0:12].eq(vector8[5])
         vector85Aftercos = Signal(2*dw)
         vector85Finalcos = Signal(dw)
@@ -263,8 +269,7 @@ class DCTDatapath(Module):
         vector8_6block = Signal(2*dw)
         vector8_6block_Maxbit = Signal(1)
         self.sync += vector8_6block_Maxbit.eq(vector8[6][11])
-        for r in range(12):
-            self.sync += vector8_6block[r+12].eq(vector8_6block_Maxbit)
+        self.Carry(vector8_6block,vector8_6block_Maxbit)
         self.sync += vector8_6block[0:12].eq(vector8[6])
         vector86Aftercos = Signal(2*dw)
         vector86Finalcos = Signal(dw)
@@ -287,18 +292,14 @@ class DCTDatapath(Module):
 
         vector10 = Array(Signal(dw) for a in range(8))
 
-        self.sync += vector10[7].eq(vector9[7]+vector9[5])
-        self.sync += vector10[5].eq(vector9[7]-vector9[5])
-        self.sync += vector10[4].eq(vector9[4]+vector9[6])
-        self.sync += vector10[6].eq(vector9[4]-vector9[6])
-        self.sync += vector10[0].eq(vector9[0]+vector9[1])
-        self.sync += vector10[1].eq(vector9[0]-vector9[1])
+        self.Butterfly(vector9[7],vector9[5],vector10[7],vector10[5])
+        self.Butterfly(vector9[4],vector9[6],vector10[4],vector10[6])
+        self.Butterfly(vector9[0],vector9[1],vector10[0],vector10[1])
 
         vector9_2block = Signal(2*dw)
         vector9_2block_Maxbit = Signal(1)
         self.sync += vector9_2block_Maxbit.eq(vector9[2][11])
-        for r in range(12):
-            self.sync += vector9_2block[r+12].eq(vector9_2block_Maxbit)
+        self.Carry(vector9_2block,vector9_2block_Maxbit)
         self.sync += vector9_2block[0:12].eq(vector9[2])
         vector92Aftercos = Signal(2*dw)
         vector92Finalcos = Signal(dw)
@@ -312,8 +313,7 @@ class DCTDatapath(Module):
         vector9_3block = Signal(2*dw)
         vector9_3block_Maxbit = Signal(1)
         self.sync += vector9_3block_Maxbit.eq(vector9[3][11])
-        for r in range(12):
-            self.sync += vector9_3block[r+12].eq(vector9_3block_Maxbit)
+        self.Carry(vector9_3block,vector9_3block_Maxbit)
         self.sync += vector9_3block[0:12].eq(vector9[3])
         vector93Aftercos = Signal(2*dw)
         vector93Finalcos = Signal(dw)
@@ -354,8 +354,7 @@ class DCTDatapath(Module):
 
         #4th stage
 
-        self.sync += vector1d_out[1].eq(vector10[7]+vector10[4])
-        self.sync += vector1d_out[7].eq(vector10[7]-vector10[4])
+        self.Butterfly(vector10[7],vector10[4],vector1d_out[1],vector1d_out[7])
 
             
         # Create signals for extending the negative numbers
@@ -364,8 +363,7 @@ class DCTDatapath(Module):
         # See whwather the number is negative or not.
         TempMaxbit = Signal(1)
         self.sync += TempMaxbit.eq(vector10[6][11])
-        for r in range(12):
-            self.sync += vector6[r+12].eq(TempMaxbit)
+        self.Carry(vector6,TempMaxbit)
         self.sync += vector6[0:12].eq(vector10[6])
         self.sync += sqrt2.eq(181)
         # Doing the Multiplication and dividing by 128
@@ -377,8 +375,7 @@ class DCTDatapath(Module):
         vector5 = Signal(2*dw)
         TempMaxbit7 = Signal(1)
         self.sync += TempMaxbit7.eq(vector10[5][11])
-        for r in range(12):
-            self.sync += vector5[r+12].eq(TempMaxbit7)
+        self.Carry(vector5,TempMaxbit7)
         self.sync += vector5[0:12].eq(vector10[5])
         vector5After = Signal(2*dw)
         vector5Final = Signal(dw)
