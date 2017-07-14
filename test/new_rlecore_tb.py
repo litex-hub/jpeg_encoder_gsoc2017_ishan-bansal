@@ -7,7 +7,7 @@ from litex.soc.interconnect.stream import *
 from litex.soc.interconnect.stream_sim import *
 
 from litejpeg.core.common import *
-from litejpeg.core.rle3 import Runlength
+from litejpeg.core.rle.rlecore import Runlength
 
 from common import *
 
