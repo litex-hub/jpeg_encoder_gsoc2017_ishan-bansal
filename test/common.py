@@ -9,6 +9,7 @@ from litex.soc.interconnect.stream import *
 from model.enc_frame import dct
 from model.enc_frame import zigzag
 from model.enc_frame import quantize
+from model.enc_frame import rle_code
 
 class RAWImage:
     """
@@ -358,5 +359,93 @@ class Quantizer:
             if(temp < self.data[i]):
                 self.data[i] = -1*temp;
         print(self.data)
+
+
+class RLE:
+    """
+    These class is been created in order to store the value or the matrix which
+    are been used to test the RLE module.
+    The matrix are from github repositories for the purpose of input for
+    testing.
+    """
+    def __init__(self):
+        self.red_pixels_1 = [
+                        1, 12, 0,  0, 0, 0, 0, 0,
+                        0,  0, 0,  0, 0, 0, 0, 0,
+                        0,  0, 0, 10, 2, 3, 4, 0, 
+                        0,  0, 0,  0, 0, 0, 0, 0,
+                        0,  0, 0,  0, 0, 0, 0, 0, 
+                        0,  0, 0,  0, 0, 0, 0, 0,
+                        0,  0, 0,  0, 0, 0, 0, 0,
+                        0,  0, 0,  0, 1, 0, 0, 0
+                       ]
+ 
+
+        red_pixels_2 = [
+                        0, 12, 20,  0,  0,   2,   3,  4,
+                        0, 0,  2,  3,  4,   5,   1,  0,
+                        0,  0,  0,  0,  0,   0,  90,  0, 
+                        0,  0,  0, 10,  0,   0,   0,  9,
+                        1,  1,  1,  1,  2,   3,   4,  5, 
+                        1,  2,  3,  4,  1,   2,   0,  0,
+                        0,  0,  0,  0,  0,   0,   0,  0,
+                        0,  0,  0,  0,  0,   0,   0,  0
+                       ] 
+
+        green_pixels_1 = [
+                          11, 12, 0,  0, 0, 0, 0, 0,
+                           0,  0, 0,  0, 0, 0, 0, 0,
+                           0,  0, 0, 10, 2, 3, 4, 0, 
+                           0,  0, 0,  0, 1, 0, 0, 0,
+                           0,  0, 1,  1, 2, 3, 4, 5, 
+                           1,  2, 3,  4, 1, 2, 0, 0,
+                           0,  0, 0,  0, 0, 0, 0, 0,
+                           0,  0, 0,  0, 1, 0, 0, 0
+                         ] 
+
+        green_pixels_2 = [
+                          13, 12, 20,  0,  0,   0,   0,  0,
+                           0,  0,  0,  0,  0,   0,   0,  0,
+                           0,  0,  0,  0,  0,   0,   0,  0, 
+                           0,  0,  0,  0,  0,   0,   0,  0,
+                           0,  0,  0,  0,  0,   0,   0,  0, 
+                           0,  0,  0,  0,  0,   0,   0,  0,
+                           0,  0,  0,  0,  0,   0,   0,  1,
+                           1,  0,  0,  0,  1,  32,   4,  2
+                          ]
+
+        blue_pixels_1 = [
+                         11, 12, 0,  0, 0, 0, 0, 0,
+                          0,  0, 0,  0, 0, 0, 0, 0,
+                          0,  0, 0,  0, 0, 0, 0, 0, 
+                          0,  0, 0,  0, 0, 0, 0, 0,
+                          0,  0, 0,  1, 2, 3, 4, 5, 
+                          1,  2, 3,  4, 1, 2, 0, 0,
+                          0,  0, 0,  0, 0, 0, 0, 0,
+                          0,  0, 0,  0, 0, 0, 0, 1
+                        ] 
+
+        blue_pixels_2 = [
+                         16, 12, 20,  0,  0,   2,   3,  4,
+                          0,  0,  2,  3,  4,   5,   1,  0,
+                          0,  0,  0,  0,  0,   0,  90,  0, 
+                          0,  0,  0, 10,  0,   0,   0,  9,
+                          1,  1,  1,  1,  2,   3,   4,  5, 
+                          1,  2,  3,  4,  1,   2,   0,  1,
+                          1,  0,  0,  0,  0,   0,   0,  1,
+                          1,  0,  0,  0,  1,  32,   4,  2
+                        ]
+        # Get the output from the reference module.
+        self.output_red_pixels_1 = rle_code(self.red_pixels_1);                
+
+    def setdata(self,data):
+        self.data = data
+        for i in range(64):
+            temp=self.data[i]
+            Amplitude = temp%4096
+            runlength = temp >> 12
+            print("%s,%s"%(Amplitude,runlength))
+
+
 
             
