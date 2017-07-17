@@ -1,4 +1,4 @@
-# This is the module for testing the Entrophycoder.
+# This is the module for testing the RLEmain.
 
 # !/usr/bin/env python3
 from litex.gen import *
@@ -13,19 +13,22 @@ from common import *
 
 class TB(Module):
     def __init__(self):
-        # Making pipeline and the getting the Entrophycoder module.
+        # Making pipeline and the getting the RLEmain module.
         """
-        Streamer : It will pass the input to the entrophycoder.
+        Streamer : It will pass the input to the entropycoder.
                    The data is a 12 bit number in the matrix.
 
         Logger : It will get the output to the TestBench.
                  Is a 22 bit number.
+                 data[0:12] Amplitude
+                 data[12:16] Size
+                 data[16:22] Runlength
         """
         self.submodules.streamer = PacketStreamer(EndpointDescription([("data", 12)]))
         self.submodules.rlemain = RLEmain()
         self.submodules.logger = PacketLogger(EndpointDescription([("data", 22)]))
 
-        # Connecting TestBench with the Entrophycoder module.
+        # Connecting TestBench with the Entropycoder module.
         self.comb += [
             self.streamer.source.connect(self.rlemain.sink),
             self.rlemain.source.connect(self.logger.sink)

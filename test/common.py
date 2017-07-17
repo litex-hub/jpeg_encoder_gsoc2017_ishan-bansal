@@ -452,7 +452,7 @@ class RLE:
             temp = self.data[i]
             Amplitude = temp%4096
             temp = self.data[i] >> 12
-            runlength = temp%64
-            temp = temp >> 6
-            size = temp
+            size = temp%16
+            temp = temp >> 4
+            runlength = temp
             print("%s,%s,%s"%(Amplitude,runlength,size))

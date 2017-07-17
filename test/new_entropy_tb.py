@@ -1,4 +1,4 @@
-# This is the module for testing the Entrophycoder.
+# This is the module for testing the Entropycoder.
 
 # !/usr/bin/env python3
 from litex.gen import *
@@ -7,28 +7,28 @@ from litex.soc.interconnect.stream import *
 from litex.soc.interconnect.stream_sim import *
 
 from litejpeg.core.common import *
-from litejpeg.core.rle.entrophycoder import Entrophycoder
+from litejpeg.core.rle.entropycoder import Entropycoder
 
 from common import *
 
 class TB(Module):
     def __init__(self):
-        # Making pipeline and the getting the Entrophycoder module.
+        # Making pipeline and the getting the Entropycoder module.
         """
-        Streamer : It will pass the input to the entrophycoder.
+        Streamer : It will pass the input to the entropycoder.
                    The data is a 12 bit number in the matrix.
 
         Logger : It will get the output to the TestBench.
                  Is a 4 bit number.
         """
         self.submodules.streamer = PacketStreamer(EndpointDescription([("data", 12)]))
-        self.submodules.entrophycoder = Entrophycoder()
+        self.submodules.entropycoder = Entropycoder()
         self.submodules.logger = PacketLogger(EndpointDescription([("data", 4)]))
 
-        # Connecting TestBench with the Entrophycoder module.
+        # Connecting TestBench with the Entropycoder module.
         self.comb += [
-            self.streamer.source.connect(self.entrophycoder.sink),
-            self.entrophycoder.source.connect(self.logger.sink)
+            self.streamer.source.connect(self.entropycoder.sink),
+            self.entropycoder.source.connect(self.logger.sink)
         ]
 
 
@@ -46,7 +46,7 @@ def main_generator(dut):
         dut.streamer.send(packet)
         yield from dut.logger.receive()
         print("\n")
-        print("Output of the Entrophycoder module:")
+        print("Output of the Entropycoder module:")
         print(dut.logger.packet)
 
 # Going through the main module

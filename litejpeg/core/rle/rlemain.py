@@ -4,7 +4,7 @@ from litex.soc.interconnect.stream_sim import *
 
 from litejpeg.core.common import *
 
-from litejpeg.core.rle.entrophycoder import Entrophycoder
+from litejpeg.core.rle.entropycoder import Entropycoder
 from litejpeg.core.rle.rlecore import Runlength
 
 datapath_latency = 3
@@ -16,20 +16,21 @@ class RLEmain(PipelinedActor,Module):
         self.latency = datapath_latency
 
         self.submodules.rlecore = Runlength()
-        self.submodules.entrophycoder = Entrophycoder()
+        self.submodules.entropycoder = Entropycoder()
 
         self.comb += [
         self.rlecore.sink.data.eq(self.sink.data),
-        self.source.data[0:18].eq(self.rlecore.source.data[0:18]),
+        self.source.data[0:12].eq(self.rlecore.source.data[0:12]),
+        self.source.data[16:22].eq(self.rlecore.source.data[12:18]),
         self.rlecore.sink.valid.eq(self.sink.valid),
         self.rlecore.source.valid.eq(self.source.valid),
         self.rlecore.sink.ready.eq(self.sink.ready),
         self.rlecore.source.ready.eq(self.source.ready),
 
-        self.entrophycoder.sink.data.eq(self.sink.data),
-        self.source.data[18:22].eq(self.entrophycoder.source.data[0:4]),
-        self.entrophycoder.sink.valid.eq(self.sink.valid),
-        self.entrophycoder.source.valid.eq(self.source.valid),
-        self.entrophycoder.sink.ready.eq(self.sink.ready),
-        self.entrophycoder.source.ready.eq(self.source.ready)
+        self.entropycoder.sink.data.eq(self.sink.data),
+        self.source.data[12:16].eq(self.entropycoder.source.data[0:4]),
+        self.entropycoder.sink.valid.eq(self.sink.valid),
+        self.entropycoder.source.valid.eq(self.source.valid),
+        self.entropycoder.sink.ready.eq(self.sink.ready),
+        self.entropycoder.source.ready.eq(self.source.ready)
         ]

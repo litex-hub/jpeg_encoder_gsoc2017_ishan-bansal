@@ -1,4 +1,4 @@
-# Entrophycoder Module
+# Entropycoder Module
 
 # Importing libraries.
 from litex.gen import *
@@ -7,7 +7,7 @@ from litex.soc.interconnect.stream import *
 from litejpeg.core.common import *
 
 """
-Entrophycoder Module:
+Entropycoder Module:
 ----------------
 This module is been made in order to calculate the number of bits to
 store the Amplitude.
@@ -24,12 +24,12 @@ size : Contains the number of bits in the Amplitude.
 datapath_latency = 3
 
 @CEInserter()
-class EntrophyDatapath(Module):
+class EntropyDatapath(Module):
 
     """
-    EntrophyDatapath :
+    EntropyDatapath :
     ------------------
-    It contains the steps for the Entrophycoder to calculate the bits for the
+    It contains the steps for the Entropycoder to calculate the bits for the
     Amplitude to store.
 
     Parameters:
@@ -80,12 +80,12 @@ class EntrophyDatapath(Module):
         self.comb += source.data.eq(size)
 
 
-class Entrophycoder(PipelinedActor,Module):
+class Entropycoder(PipelinedActor,Module):
     """
-    This module will connect the Entrophycoder datapath with the input and output either
+    This module will connect the Entropycoder datapath with the input and output either
     from other modules or from the Test Benches.
     The input is been taken from the sink and source and is been transferred to
-    the Entrophycoder datapath by using read and write count.
+    the Entropycoder datapath by using read and write count.
     """
     def __init__(self):
 
@@ -97,8 +97,8 @@ class Entrophycoder(PipelinedActor,Module):
         PipelinedActor.__init__(self, datapath_latency)
         self.latency = datapath_latency
 
-        # Connecting Entrophycoder submodule.
-        self.submodules.datapath = EntrophyDatapath()
+        # Connecting Entropycoder submodule.
+        self.submodules.datapath = EntropyDatapath()
         self.comb += self.datapath.ce.eq(self.pipe_ce)
 
 
