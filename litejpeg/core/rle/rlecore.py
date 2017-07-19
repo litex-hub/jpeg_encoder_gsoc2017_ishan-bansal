@@ -88,7 +88,7 @@ class RLEDatapath(Module):
         self.dovalid_next = Signal(1)
         self.dovalid_next_next = Signal(1)
 
-        zero_count = Signal(6)
+        zero_count = Signal(4)
         prev_dc_0 = Signal(12)
 
 
@@ -110,19 +110,26 @@ class RLEDatapath(Module):
             self.dovalid.eq(1)
         ).Else(
               If(sink.data == 0,
-                If(self.write_cnt == 63,
+                If(zero_count==15,
+                accumulator.eq(0),
+                runlength.eq(15),
+                zero_count.eq(zero_count+1),
+                self.dovalid.eq(1)
+                ).Else(
+                    If(self.write_cnt == 63,
                     # If the data is zero and it is the end of the matrix than the output is
                     # generated to be with Amplitude = 0 and Runlength=0 this will automatically
                     # indicate the end of the matrix.
-                    accumulator.eq(0),
-                    runlength.eq(0),
-                    self.dovalid.eq(1)
-                    ).Else(
+                      accumulator.eq(0),
+                      runlength.eq(0),
+                      self.dovalid.eq(1)
+                      ).Else(
                     # Otherwise if zero is encountered in between than the only contribution is
                     # to increase the count of zero_count by 1.
-                    zero_count.eq(zero_count+1),
-                    self.dovalid.eq(0)
-                    )
+                      zero_count.eq(zero_count+1),
+                      self.dovalid.eq(0)
+                      )
+                )
               ).Else(
               # Else if a non-zero AC cofficient is detected than the output is been generated with
               # the amplitude equal to that of the AC cofficient and the number of zeros are been
@@ -147,7 +154,8 @@ class RLEDatapath(Module):
 
         # Connecting the Datapath module to the main module.
         self.source_inter.data[0:12].eq(accumulator),
-        self.source_inter.data[12:18].eq(runlength)
+        self.source_inter.data[12:16].eq(runlength),
+        self.source_inter.data[16].eq(self.dovalid)
 
         ]
 
@@ -170,7 +178,7 @@ class Runlength(PipelinedActor,Module):
 
         # Connecting the module to the input and the output.
         self.sink = sink = stream.Endpoint(EndpointDescription(block_layout(12)))
-        self.source = source = stream.Endpoint(EndpointDescription(block_layout(18)))
+        self.source = source = stream.Endpoint(EndpointDescription(block_layout(17)))
 
         # Adding PipelineActor to provide additional clock for the module.
         PipelinedActor.__init__(self, datapath_latency)

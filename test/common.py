@@ -443,8 +443,11 @@ class RLE:
         for i in range(64):
             temp=self.data[i]
             Amplitude = temp%4096
-            runlength = temp >> 12
-            print("%s,%s"%(Amplitude,runlength))
+            temp = temp >> 12
+            runlength = temp % 16
+            temp = temp >> 4
+            if(temp):
+                print("%s,%s"%(Amplitude,runlength))
 
     def set_rledata(self,data):
         self.data = data
@@ -454,5 +457,7 @@ class RLE:
             temp = self.data[i] >> 12
             size = temp%16
             temp = temp >> 4
-            runlength = temp
-            print("%s,%s,%s"%(Amplitude,runlength,size))
+            runlength = temp%16
+            temp = temp >> 4
+            if(temp):
+                print("%s,%s,%s"%(Amplitude,runlength,size))

@@ -22,11 +22,12 @@ class TB(Module):
                  Is a 22 bit number.
                  data[0:12] Amplitude
                  data[12:16] Size
-                 data[16:22] Runlength
+                 data[16:20] Runlength
+                 data[21] dvalid
         """
         self.submodules.streamer = PacketStreamer(EndpointDescription([("data", 12)]))
         self.submodules.rlemain = RLEmain()
-        self.submodules.logger = PacketLogger(EndpointDescription([("data", 22)]))
+        self.submodules.logger = PacketLogger(EndpointDescription([("data", 21)]))
 
         # Connecting TestBench with the Entropycoder module.
         self.comb += [

@@ -19,7 +19,7 @@ input to the RLE core and the output is been printed and compared
 with the one from the reference modules.
 In this way the result from the RLEcore is been verified.
 """
-class TB(Module): 
+class TB(Module):
     def __init__(self):
         # Making pipeline and the getting the RLEcore module.
         """
@@ -29,21 +29,21 @@ class TB(Module):
         Logger : It will get the output to the TestBench.
                  Is a 18 bit number.
                  logger[0:12] : Amplitude
-                 logger[12:18] : Runlength 
+                 logger[12:16] : Runlength
         """
         self.submodules.streamer = PacketStreamer(EndpointDescription([("data", 12)]))
         self.submodules.runlength = Runlength()
-        self.submodules.logger = PacketLogger(EndpointDescription([("data", 18)]))
+        self.submodules.logger = PacketLogger(EndpointDescription([("data", 17)]))
 
         # Connecting TestBench with the RLEcore module.
         self.comb += [
             self.streamer.source.connect(self.runlength.sink),
-            self.runlength.source.connect(self.logger.sink) 
+            self.runlength.source.connect(self.logger.sink)
         ]
 
 
 def main_generator(dut):
-    
+
     # Results from the reference modules:
     model = RLE()
     print("The Input Module:")
