@@ -13,6 +13,4 @@ def build_huffman_rom_tables(csvfile):
             code.append(row[0])
             size.append(row[1])
 
-    code = tuple(code)
-    size = tuple(size)
     return code, size

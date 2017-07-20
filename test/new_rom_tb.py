@@ -4,31 +4,35 @@ from litex.soc.interconnect.stream import *
 from litex.soc.interconnect.stream_sim import *
 
 from litejpeg.core.common import *
-from litejpeg.core.huffman.dc_rom import dc_rom
+from litejpeg.core.huffman.ac_cr_rom import ac_cr_rom
 
 from common import *
 
 class TB(Module):
     def __init__(self):
-        self.addr = Signal(4)
+        self.addr1 = Signal(4)
+        self.addr2 = Signal(4)
         self.data = Signal(16)
-        self.data_size = Signal(4)
-        self.submodules.dc_rom = dc_rom(self,self.addr,self.data,self.data_size)
-        
+        self.data_size = Signal(5)
+        ac_cr_rom(self,self.addr1,self.addr2,self.data_size,self.data)
+
 
 
 def main_generator(dut):
-    yield dut.addr.eq(4)
+    yield dut.addr2.eq(0)
+    yield dut.addr1.eq(0)
+    yield
+    for i in range(12):
+        yield dut.addr2.eq(0)
+        yield dut.addr1.eq(i+1)
+        yield
+        print((yield dut.data),"  ",(yield dut.data_size))
+    yield
+    print((yield dut.data),"  ",(yield dut.data_size))
 
 
-# Going through the main module
+
 if __name__ == "__main__":
-    tb = TB()
-    generators = {"sys" : [main_generator(tb)]}
-    generators = {
-        "sys" :   [main_generator(tb),
-                   tb.streamer.generator(),
-                   tb.logger.generator()]
-    }
-    clocks = {"sys": 10}
-    run_simulation(tb, generators, clocks, vcd_name="sim.vcd")
+    dut = TB()
+    clocks = {"sys":10}
+    run_simulation(dut, main_generator(dut), clocks, vcd_name="sim.vcd")
