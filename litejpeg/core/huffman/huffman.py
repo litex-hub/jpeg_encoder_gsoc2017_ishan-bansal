@@ -43,12 +43,14 @@ class HuffmanDatapath(Module):
         pad_reg = Signal(1)
 
         self.sync += [
-        inst_dc_rom = dc_rom(self,size,vlc_dc_size,vlc_dc),
-        inst_ac_rom = ac_rom(self,runlength,size,vlc_ac_size,vlc_ac)
+        # Selecting the encrypted data bits along with the size to store them.
+        dc_rom(self,size,vlc_dc_size,vlc_dc),
+        ac_rom(self,runlength,size,vlc_ac_size,vlc_ac)
         ]
 
         self.sync += [
 
+        # Selecting the AC and DC ROM.
         If(first_rle_word,
            vlc_d.eq(vlc_dc),
            vlc_size_d.eq(vlc_dc_size)
@@ -60,6 +62,48 @@ class HuffmanDatapath(Module):
         ]
 
         self.sync += [
+
+        If(state_temp,
+            read_enable_temp.eq(True and ~rle_fifo_empty)
+          ),
+
+        If(hfw_running and ~ready_hfw,
+             If(num_fifo_wrs==0,
+                  ready_hfw.eq(True),
+                  If(state == 2,
+                       read_enable_temp.eq(True and not rle_fifo_empty)
+                   )
+             ).Else(
+                  fifo_wrt_cnt.eq(fifo_wrt_cnt+1),
+                  # dfifo.write.next = True
+                  If((fifo_wrt_cnt +1)==num_fifo_wrs,
+                        ready_hfw.eq(1),
+                        If(state == 2,
+                              read_enable_temp.eq(True and not rle_fifo_empty)
+                        ),
+                        fifo_wrt_cnt.eq(0)
+                    )
+               )
+           ),
+
+          If(fifo_wrt_cnt == 0,
+               #dfifo.write_data.next = word_reg[(width_word):(width_word-8)]
+          ).Elseif(fifo_wrt_cnt == 1,
+               #dfifo.write_data.next = word_reg[(width_word-8):(width_word-16)]
+          ).Else(
+               #dfifo.write_data.next = 0
+          ),
+
+          If(pad_reg == 1,
+              #dfifo.write_data.next = pad_byte)
+          )
+
+        ]
+
+        self.sync += [
+        # State Machine
+
+        # IDLE state
         If(state == 0,
 
             If(huffman.start,
@@ -68,9 +112,10 @@ class HuffmanDatapath(Module):
             state.eq(1)
             )
 
+        # VLC state
         ).Elseif(state ==1,
 
-           [word_reg[width_word-1-bit_ptr-i]=vlc[vlc_size -i-1]for i in range(vlc_size)],
+           [word_reg[width_word-1-bit_ptr-i].eq(vlc[vlc_size -i-1]) for i in range(vlc_size)],
            bit_ptr.eq(bit_ptr + vlc_size),
            hfw_running.eq(1),
 
@@ -78,10 +123,11 @@ class HuffmanDatapath(Module):
 
                 word_reg.eq(word_reg << (num_fifo_wrs)*8),
                 bit_ptr.eq(bit_ptr + vlc_size),
-                hfw_running.eq(0),,
+                hfw_running.eq(0),
                 first_rle_word.eq(0),
                 state.eq(2)
            )
+        # VLI state
         ).Elseif(state==2,
 
            If(hfw_running==0,
@@ -111,10 +157,16 @@ class HuffmanDatapath(Module):
                 )
            )
 
+        # Padding state
         ).Else(
 
            If(hfw_running !=0,
 
+                [(If(i<bit_ptr,
+                      pad_byte[7-i].eq(word_reg[width_word-1-i])
+                     ).Else(
+                     pad_byte[7-i].eq(1)
+                     )) for i in range(7)],
                 pad_reg.eq(1),
                 bit_ptr.eq(8),
                 hfw_running.eq(1)
@@ -130,12 +182,7 @@ class HuffmanDatapath(Module):
         ]
 
 class Huffman(PipelinedActor,Module):
-    """
-    This module will connect the Rle core datapath with the input and output either
-    from other modules or from the Test Benches.
-    The input is been taken from the sink and source and is been transferred to
-    the RLE core datapath by using read and write count.
-    """
+    
     def __init__(self):
 
         # Connecting the module to the input and the output.
