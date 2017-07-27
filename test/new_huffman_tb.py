@@ -7,7 +7,7 @@ from litex.soc.interconnect.stream import *
 from litex.soc.interconnect.stream_sim import *
 
 from litejpeg.core.common import *
-from litejpeg.core.huffman.huffman import Huffman
+from litejpeg.core.huffman.huffmancore import HuffmanEncoder
 
 from common import *
 
@@ -35,10 +35,10 @@ class TB(Module):
                  as per the huffman tables.
         """
         self.submodules.streamer = PacketStreamer(EndpointDescription([("data", 20)]))
-        self.submodules.huffman = Huffman()
-        self.submodules.logger = PacketLogger(EndpointDescription([("data", 16)]))
+        self.submodules.huffman = HuffmanEncoder()
+        self.submodules.logger = PacketLogger(EndpointDescription([("data", 8)]))
 
-        # Connecting TestBench with the RLEcore module.
+        # Connecting TestBench with the Huffman Encoder module.
         self.comb += [
             self.streamer.source.connect(self.huffman.sink),
             self.huffman.source.connect(self.logger.sink)
@@ -49,13 +49,16 @@ def main_generator(dut):
 
     # Results from the implemented module.
     model2 = Huffman()
-    packet = Packet(model2.red_pixels_1)
+    input_data = model2.concat_input(
+                 model2.vli_test_y,
+                 model2.vli_size_test_y,
+                 model2.runlength_test_y)
+    packet = Packet(input_data)
+    print("Output of the Huffman Module:")
     for i in range(1):
         dut.streamer.send(packet)
         yield from dut.logger.receive()
-        print("\n")
-        print("Output of the RLE module:")
-        model2.setdata(dut.logger.packet)
+        #print(dut.logger.packet)
 
 # Going through the main module
 if __name__ == "__main__":

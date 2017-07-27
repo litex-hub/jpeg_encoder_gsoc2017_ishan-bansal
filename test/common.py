@@ -466,7 +466,7 @@ class RLE:
 
 class Huffman:
     def __init__ (self):
-        vli_test_y = [
+        self.vli_test_y = [
                  10, 1, 2, 4, 8, 16, 32, 65,
                  128, 256, 1000, 1, 2, 4, 8, 16,
                  32, 65, 128, 256, 1000, 1, 2, 4,
@@ -478,7 +478,7 @@ class Huffman:
                  ]
 
 
-        vli_size_test_y = [
+        self.vli_size_test_y = [
                  4, 1, 2, 3, 4, 5, 6, 7,
                  8, 9, 10, 1, 2, 3, 4, 5,
                  6, 7, 8, 9, 10, 1, 2, 3,
@@ -489,7 +489,7 @@ class Huffman:
                  1, 1, 1, 1, 2, 2, 2, 1,
                  ]
 
-        runlength_test_y = [
+        self.runlength_test_y = [
                  0, 2, 0, 0, 0, 0, 0, 0,
                  0, 0, 0, 1, 0, 2, 1, 0,
                  2, 1, 0, 2, 1, 0, 2, 2,
@@ -500,7 +500,7 @@ class Huffman:
                  2, 0, 0, 0, 0, 0, 0, 0,
                  ]
 
-        vli_test_cb = [
+        self.vli_test_cb = [
                  10, 1, 1, 1, 1, 1, 1, 1,
                  128, 2, 2, 1, 2, 4, 8, 16,
                  32, 65, 128, 2, 2, 1, 2, 4,
@@ -512,7 +512,7 @@ class Huffman:
                  ]
 
 
-        vli_size_test_cb = [
+        self.vli_size_test_cb = [
                  4, 1, 1, 1, 1, 1, 1, 1,
                  8, 2, 2, 1, 2, 3, 4, 5,
                  6, 7, 8, 9, 1, 1, 2, 3,
@@ -524,7 +524,7 @@ class Huffman:
                  ]
 
 
-        runlength_test_cb = [
+        self.runlength_test_cb = [
                  0, 2, 0, 0, 0, 0, 0, 0,
                  0, 0, 0, 1, 0, 2, 1, 0,
                  2, 1, 0, 2, 1, 0, 2, 2,
@@ -535,7 +535,7 @@ class Huffman:
                  2, 0, 0, 0, 0, 0, 0, 0,
                  ]
 
-        vli_test_cr = [
+        self.vli_test_cr = [
                  10, 1, 2, 2, 2, 2, 2, 2,
                  128, 2, 2, 1, 2, 4, 8, 16,
                  32, 65, 128, 2, 2, 1, 2, 4,
@@ -547,7 +547,7 @@ class Huffman:
                  ]
 
 
-        vli_size_test_cr = [
+        self.vli_size_test_cr = [
                  4, 1, 1, 1, 1, 1, 1, 1,
                  8, 1, 1, 1, 2, 3, 4, 5,
                  6, 7, 8, 9, 1, 1, 2, 3,
@@ -559,7 +559,7 @@ class Huffman:
                  ]
 
 
-        runlength_test_cr = [
+        self.runlength_test_cr = [
                  0, 2, 0, 0, 0, 0, 0, 0,
                  0, 0, 0, 1, 0, 2, 1, 0,
                  2, 1, 0, 2, 1, 0, 2, 2,
@@ -569,3 +569,15 @@ class Huffman:
                  0, 0, 2, 0, 0, 0, 0, 0,
                  2, 0, 0, 0, 0, 0, 0, 0,
                  ]
+
+    def concat_input(self, data1, data2, data3):
+        self.data1 = data1
+        self.data2 = data2
+        self.data3 = data3
+        self.data = []
+        for i in range(64):
+            data = (self.data3[i] & 0xff) << 16
+            data = (self.data2[i] & 0xff) << 12
+            data = (self.data1[i] & 0xff) << 0
+            self.data.append(data)
+        return(self.data)
