@@ -2,8 +2,8 @@ from litex.gen import *
 from litex.soc.interconnect.stream import *
 
 from litejpeg.core.common import *
-from litejpeg.core.huffman.ac_rom import ac_rom
-from litejpeg.core.huffman.dc_rom import dc_rom
+from litejpeg.core.huffman.ac_rom import ac_rom_core
+from litejpeg.core.huffman.dc_rom import dc_rom_core
 
 
 datapath_latency = 0
@@ -19,6 +19,9 @@ class HuffmanDatapath(Module):
         self.source = source = Record(block_layout(8))
         self.dovalid = Signal(1)
         self.word_count = Signal(6)
+
+        self.submodules.dc_rom_got = dc_rom_core()
+        self.submodules.ac_rom_got = ac_rom_core()
 
 
         width_word = 16+7
@@ -58,17 +61,30 @@ class HuffmanDatapath(Module):
         self.start = Signal(1)
 
         self.comb += [
+
+        self.dc_rom_got.address.eq(size),
+        self.dc_rom_got.data_out_size.eq(vlc_dc_size),
+        self.dc_rom_got.data_out_code.eq(vlc_dc),
+
+        self.ac_rom_got.address1.eq(runlength),
+        self.ac_rom_got.address2.eq(size),
+        self.ac_rom_got.data_out_size.eq(vlc_ac_size),
+        self.ac_rom_got.data_out_code.eq(vlc_ac)
+
+        ]
+
+        self.comb += [
         [If( j < vli_ext_size,
                   vli_ext[j].eq(self.Amplitude[j]))
                           for j in range(12)],
         vli_ext_size.eq(self.size)
         ]
 
-        self.sync += [
+        #self.sync += [
         # Selecting the encrypted data bits along with the size to store them.
-        dc_rom(self,size,vlc_dc_size,vlc_dc),
-        ac_rom(self,runlength,size,vlc_ac_size,vlc_ac)
-        ]
+        #dc_rom(self,size,vlc_dc_size,vlc_dc),
+        #ac_rom(self,runlength,size,vlc_ac_size,vlc_ac)
+        #]
 
         self.sync += [
 
