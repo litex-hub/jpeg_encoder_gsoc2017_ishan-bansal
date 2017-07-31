@@ -10,6 +10,7 @@ from model.enc_frame import dct
 from model.enc_frame import zigzag
 from model.enc_frame import quantize
 from model.enc_frame import rle_code
+from model.enc_frame import huffman_ref
 
 class RAWImage:
     """
@@ -577,7 +578,10 @@ class Huffman:
         self.data = []
         for i in range(64):
             data = (self.data3[i] & 0xff) << 16
-            data = (self.data2[i] & 0xff) << 12
-            data = (self.data1[i] & 0xff) << 0
+            data |= (self.data2[i] & 0xff) << 12
+            data |= (self.data1[i] & 0xff) << 0
             self.data.append(data)
         return(self.data)
+
+    def reference_module(self, runlength_block, size_block, amplitude_block):
+        huffman_ref(runlength_block, size_block, amplitude_block)

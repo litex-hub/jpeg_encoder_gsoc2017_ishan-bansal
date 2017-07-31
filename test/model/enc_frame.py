@@ -2,6 +2,7 @@ from PIL import Image
 import numpy as np
 from itertools import groupby,chain
 import math
+import csv
 
 def readRgbImageBlocks(name):
     arr = np.array(Image.open(name))
@@ -164,16 +165,89 @@ def zigzag(block):
         r[zig_zag_order[i]] = block[i]
     return r
 
-#def rle_code(block):
-#    entropy = []
-#    count = 0
-#    for i in block:
-#        if()
-
-#    return entropy
-
 def rle_code(block):
     return list(chain(*[(symbol,len(list(g))) for symbol, g in groupby(block)]))
+
+def build_huffman_rom_tables(csvfile):
+    """build huffman tables"""
+    code = []
+    size = []
+    with open(csvfile, 'r') as csvfp:
+        csvreader = csv.reader(csvfp, delimiter=',')
+        for row in csvreader:
+            code.append(row[0])
+            size.append(row[1])
+    code = tuple(code)
+    size = tuple(size)
+    return code, size
+
+def table_huff_gen(filename, base):
+    """huffman table generator"""
+    code, size = build_huffman_rom_tables(filename)
+    rom_code_size = len(code)
+    rom_code = [0 for _ in range(rom_code_size)]
+    rom_code = [int(code[0], base)] + [int(
+        code[ii+1], base) for ii in range(rom_code_size-1)]
+    rom_code = tuple(rom_code)
+    rom_depth = len(size)
+    rom_size = [0 for _ in range(rom_depth)]
+    rom_size = [int(size[0])] + [int(size[ii+1]) for ii in range(rom_depth-1)]
+    rom_size = tuple(rom_size)
+    return rom_size, rom_code
+
+def huffman_ref(
+        runlength_block, size_block, amplitude_block):
+    """reference model for huffman encoder"""
+
+    size_ac, code_ac = table_huff_gen(
+        '/home/ishan/gsoc/environment/litejpeg-master/litejpeg/core/huffman/ac_rom.csv', 2)
+    size_dc, code_dc = table_huff_gen(
+        '/home/ishan/gsoc/environment/litejpeg-master/litejpeg/core/huffman/dc_rom.csv', 10)
+
+    for i in range(64):
+
+        runlength = format(runlength_block[i], '04b')
+        size = format(size_block[i], '04b')
+        connect_both = runlength + size
+        get_concate = int(connect_both,2)
+
+        if(i == 0):
+            vlc_size = size_dc[get_concate]
+            vlc = code_dc[get_concate]
+        else:
+            vlc_size = size_ac[get_concate]
+            vlc = code_ac[get_concate]
+
+        vlc_size_ref_s = str(0) + str(vlc_size) + 'b'
+        vlc_ref_s = format(vlc,vlc_size_ref_s)
+
+        if(vlc_size != 0):
+            if(i == 0 ):
+                register = vlc_ref_s
+                bit_ptr = int(vlc_size)
+            else:
+                register = register + vlc_ref_s
+                bit_ptr = bit_ptr + int(vlc_size)
+
+        size_s = str(0) + str(size_block[i]) + 'b'
+        if( size_block[i] != 0):
+            vli_ref = format(amplitude_block[i],size_s)
+            register = register + vli_ref
+            bit_ptr = bit_ptr + int(size_block[i])
+
+
+    output_buffer = []
+    num_fifo = int(bit_ptr/8)
+    for k in range(num_fifo):
+        temp_value = register[k:k+8]
+        output_buffer.append(temp_value)
+    if(bit_ptr % 8 !=0):
+        pointer = num_fifo*8
+        output_buffer.append(register[pointer:])
+
+    for i in range(num_fifo):
+        print(int(output_buffer[i],2))
+
 
 
 def huffman(block):
@@ -236,6 +310,3 @@ if __name__ == '__main__':
         huffman(y_rle)
         huffman(cb_rle)
         huffman(cr_rle)
-
-
-

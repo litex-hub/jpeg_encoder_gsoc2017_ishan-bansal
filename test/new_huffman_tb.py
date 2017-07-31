@@ -49,6 +49,16 @@ def main_generator(dut):
 
     # Results from the implemented module.
     model2 = Huffman()
+    print("Input data given to the Huffman:")
+
+    print("Output of the reference module:")
+    model2.reference_module(model2.runlength_test_y ,
+                            model2.vli_size_test_y,
+                            model2.vli_test_y)
+    #print("Amplitude :: Size :: Runlength")
+    #for i in range(64):
+    #    print(model2.vli_test_y[i], model2.vli_size_test_y[i], model2.runlength_test_y[i])
+
     input_data = model2.concat_input(
                  model2.vli_test_y,
                  model2.vli_size_test_y,
@@ -58,7 +68,7 @@ def main_generator(dut):
     for i in range(1):
         dut.streamer.send(packet)
         yield from dut.logger.receive()
-        #print(dut.logger.packet)
+        print(dut.logger.packet)
 
 # Going through the main module
 if __name__ == "__main__":

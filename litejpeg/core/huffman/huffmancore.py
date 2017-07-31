@@ -6,7 +6,7 @@ from litejpeg.core.huffman.ac_rom import ac_rom_core
 from litejpeg.core.huffman.dc_rom import dc_rom_core
 
 
-datapath_latency = 0
+datapath_latency = 2
 
 @CEInserter()
 class HuffmanDatapath(Module):
@@ -33,12 +33,10 @@ class HuffmanDatapath(Module):
         bit_ptr = Signal(5)
         num_fifo_wrs = Signal(2)
 
-        ready_hfw = Signal(1)
+        #ready_hfw = Signal(1)
         hfw_running = Signal(1)
         fifo_wrt_cnt = Signal(2)
-        last_block = Signal(1)
-
-        img_area = Signal(16)
+        #last_block = Signal(1)
 
         vlc_dc = Signal(16)
         vlc_dc_size = Signal(5)
@@ -49,12 +47,17 @@ class HuffmanDatapath(Module):
         vlc_size_d = Signal(5)
 
         vli_ext = Array(Signal() for i in range(16))
+        vli_ext_next = Array(Signal() for i in range(16))
+        vli_ext_next_next = Array(Signal() for i in range(16))
         vli_ext_size = Signal(5)
+        vli_ext_size_next = Signal(5)
+        vli_ext_size_next_next = Signal(5)
 
         pad_byte = Signal(8)
         pad_reg = Signal(1)
 
         # temporary values.
+        self.ready_data_write = Signal(1)
         state_temp = Signal(1)
         read_enable_temp = Signal(1)
         rle_fifo_empty = Signal(1)
@@ -62,14 +65,14 @@ class HuffmanDatapath(Module):
 
         self.comb += [
 
-        self.dc_rom_got.address.eq(size),
-        self.dc_rom_got.data_out_size.eq(vlc_dc_size),
-        self.dc_rom_got.data_out_code.eq(vlc_dc),
+        self.dc_rom_got.address.eq(self.size),
+        vlc_dc_size.eq(self.dc_rom_got.data_out_size),
+        vlc_dc.eq(self.dc_rom_got.data_out_code),
 
-        self.ac_rom_got.address1.eq(runlength),
-        self.ac_rom_got.address2.eq(size),
-        self.ac_rom_got.data_out_size.eq(vlc_ac_size),
-        self.ac_rom_got.data_out_code.eq(vlc_ac)
+        self.ac_rom_got.address1.eq(self.size),
+        self.ac_rom_got.address2.eq(self.runlength),
+        vlc_ac_size.eq(self.ac_rom_got.data_out_size),
+        vlc_ac.eq(self.ac_rom_got.data_out_code)
 
         ]
 
@@ -80,11 +83,6 @@ class HuffmanDatapath(Module):
         vli_ext_size.eq(self.size)
         ]
 
-        #self.sync += [
-        # Selecting the encrypted data bits along with the size to store them.
-        #dc_rom(self,size,vlc_dc_size,vlc_dc),
-        #ac_rom(self,runlength,size,vlc_ac_size,vlc_ac)
-        #]
 
         self.sync += [
 
@@ -101,6 +99,13 @@ class HuffmanDatapath(Module):
 
         self.comb += [
         num_fifo_wrs.eq(bit_ptr[3:5])
+        ]
+
+        self.sync += [
+        [vli_ext_next[i].eq(vli_ext[i]) for i in range(16)],
+        [vli_ext_next_next[i].eq(vli_ext_next[i]) for i in range(16)],
+        vli_ext_size_next.eq(vli_ext_size),
+        vli_ext_size_next_next.eq(vli_ext_size_next)
         ]
 
         self.sync += [
@@ -143,6 +148,7 @@ class HuffmanDatapath(Module):
         If(state == 0,
             If(self.word_count == 0,
             first_rle_word.eq(1),
+            self.ready_data_write.eq(1),
             state.eq(1)
             )
         # VLC state
@@ -153,6 +159,7 @@ class HuffmanDatapath(Module):
                word_reg[width_word-1-bit_ptr-i].eq(vlc_d[vlc_size_d-1-i]))
                      for i in range(width_word)],
            bit_ptr.eq(bit_ptr + vlc_size_d),
+           self.ready_data_write.eq(0),
            hfw_running.eq(1),
 
                 If(hfw_running & ((num_fifo_wrs==0) | (fifo_wrt_cnt+1 == num_fifo_wrs)),
@@ -173,10 +180,10 @@ class HuffmanDatapath(Module):
 
                 #[(word_reg[width_word-1-btr_ptr-i].eq(vli_ext[vli_ext_size-1-i]))
                 #                  for i in range(vli_ext_size)],
-                [If( i < vli_ext_size,
-                     word_reg[width_word-1-bit_ptr-i].eq(vli_ext[vli_ext_size-1-i]))
+                [If( i < vli_ext_size_next_next,
+                     word_reg[width_word-1-bit_ptr-i].eq(vli_ext_next_next[vli_ext_size_next_next-1-i]))
                          for i in range(width_word)],
-                bit_ptr.eq(bit_ptr + vli_ext_size),
+                bit_ptr.eq(bit_ptr + vli_ext_size_next_next),
                 hfw_running.eq(1)
 
            ).Elif(hfw_running & ((num_fifo_wrs==0) | (fifo_wrt_cnt+1 == num_fifo_wrs)),
@@ -198,7 +205,8 @@ class HuffmanDatapath(Module):
                     state.eq(0)
                     )
                 ).Else(
-                state.eq(1)
+                state.eq(1),
+                self.ready_data_write.eq(1)
                 )
            )
 
@@ -235,22 +243,23 @@ class HuffmanEncoder(PipelinedActor, Module):
         # Adding PipelineActor to provide additional clock for the module.
         PipelinedActor.__init__(self, datapath_latency)
         self.latency = datapath_latency
+        self.ready_data_write = Signal()
+        self.ready_data_read = Signal()
 
         # Connecting RLE submodule.
         self.submodules.datapath = HuffmanDatapath()
         self.comb += self.datapath.ce.eq(self.pipe_ce)
 
-
+        #get_data = Memory(12, 64*2)
+        #data_write_port = get_data.get_port(write_capable=True)
+        #data_read_port = get_data.get_port(async_read=True)
+        #self.specials += get_data, data_write_port, data_read_port
 
         # Intialising the variables.
 
-        # Check wheather to start write or not.
         write_sel = Signal()
-        # To swap the write select.
         write_swap = Signal()
-        # Check wheather to start read or not.
         read_sel = Signal(reset=1)
-        # To swap the read_sel.
         read_swap = Signal()
 
         # To swap the read and write select whenever required.
@@ -283,6 +292,12 @@ class HuffmanEncoder(PipelinedActor, Module):
         # To combine the datapath into the module
         self.comb += [
             #self.datapath.sink.data.eq(sink.data)
+            #data_write_port.adr.eq(write_count),
+            #data_write_port.adr[-1].eq(write_sel),
+            #data_write_port.dat_w.eq(sink.data),
+            #data_write_port.we.eq(sink.valid & sink.ready),
+
+            self.ready_data_write.eq(self.datapath.ready_data_write),
             self.datapath.Amplitude.eq(sink.data[0:12]),
             self.datapath.size.eq(sink.data[12:16]),
             self.datapath.runlength.eq(sink.data[16:20]),
@@ -301,6 +316,7 @@ class HuffmanEncoder(PipelinedActor, Module):
         self.submodules.write_fsm = write_fsm = FSM(reset_state="GET_RESET")
         write_fsm.act("GET_RESET",
             write_clear.eq(1),
+            self.ready_data_write.eq(1),
             If(write_sel != read_sel,
                 NextState("WRITE_INPUT")
             )
@@ -315,6 +331,7 @@ class HuffmanEncoder(PipelinedActor, Module):
         that of the IDLE state.
         """
         write_fsm.act("WRITE_INPUT",
+        If(self.ready_data_write,
             sink.ready.eq(1),
             If(sink.valid,
                 If(write_count == 63,
@@ -324,6 +341,10 @@ class HuffmanEncoder(PipelinedActor, Module):
                     write_inc.eq(1)
                 )
             )
+        ).Else(
+            sink.ready.eq(0),
+            write_inc.eq(0)
+        )
         )
 
         # read path
@@ -375,3 +396,16 @@ class HuffmanEncoder(PipelinedActor, Module):
                 )
             )
         )
+
+        #self.comb += [
+        #self.datapath.Amplitude.eq(get_data[i][0:12]),
+        #self.datapath.size.eq(get_data[i][12:16]),
+        #self.datapath.runlength.eq(get_data[i][16:20]),
+        #self.datapath.word_count.eq(write_count)
+        #]
+
+        #i = Signal(reset = 0)
+        #self.sync += [
+        #If(ready_data,
+        #     i.eq(i+1))
+        #]
