@@ -16,17 +16,21 @@ class HuffmanDatapath(Module):
         self.Amplitude = Amplitude = Signal(12)
         self.size = size = Signal(4)
         self.runlength = runlength = Signal(4)
-        self.source = source = Record(block_layout(8))
-        self.dovalid = Signal(1)
+
+        self.source = source = Record(block_layout(9))
+
+        self.ready_data_write = Signal(1)
+        self.ready_data_read = Signal(1)
         self.word_count = Signal(6)
 
         self.submodules.dc_rom_got = dc_rom_core()
         self.submodules.ac_rom_got = ac_rom_core()
 
-
         width_word = 16+7
         state = Signal(3)
         first_rle_word = Signal(1)
+        delay = Signal(2)
+        ready_one = Signal(1)
 
         #word_reg = Signal(width_word)
         word_reg = Array(Signal(1) for i in range(width_word))
@@ -49,15 +53,17 @@ class HuffmanDatapath(Module):
         vli_ext = Array(Signal() for i in range(16))
         vli_ext_next = Array(Signal() for i in range(16))
         vli_ext_next_next = Array(Signal() for i in range(16))
+        vli_ext_next_next_next = Array(Signal() for i in range(16))
         vli_ext_size = Signal(5)
         vli_ext_size_next = Signal(5)
         vli_ext_size_next_next = Signal(5)
+        vli_ext_size_next_next_next = Signal(5)
 
         pad_byte = Signal(8)
         pad_reg = Signal(1)
 
         # temporary values.
-        self.ready_data_write = Signal(1)
+
         state_temp = Signal(1)
         read_enable_temp = Signal(1)
         rle_fifo_empty = Signal(1)
@@ -104,31 +110,38 @@ class HuffmanDatapath(Module):
         self.sync += [
         [vli_ext_next[i].eq(vli_ext[i]) for i in range(16)],
         [vli_ext_next_next[i].eq(vli_ext_next[i]) for i in range(16)],
+        [vli_ext_next_next_next[i].eq(vli_ext_next_next[i]) for i in range(16)],
         vli_ext_size_next.eq(vli_ext_size),
-        vli_ext_size_next_next.eq(vli_ext_size_next)
+        vli_ext_size_next_next.eq(vli_ext_size_next),
+        vli_ext_size_next_next_next.eq(vli_ext_size_next_next),
         ]
 
         self.sync += [
         If(hfw_running,
              If(num_fifo_wrs == 0,
-                 self.dovalid.eq(1)
+                 #self.dovalid.eq(1)
+                 self.ready_data_read.eq(0)
              ).Else(
-               If(fifo_wrt_cnt + 1 == num_fifo_wrs,
-                 self.dovalid.eq(1)
+               If(fifo_wrt_cnt == num_fifo_wrs,
+                 self.ready_data_read.eq(0)
+                 #self.dovalid.eq(1)
                ).Else(
                    fifo_wrt_cnt.eq(fifo_wrt_cnt+1),
-                   self.dovalid.eq(1)
+                   self.ready_data_read.eq(1)
+                   #self.dovalid.eq(1)
                )
              )
         ),
         If(fifo_wrt_cnt == 0,
                #dfifo.write_data.next = word_reg[(width_word):(width_word-8)]
                #self.source.data.eq(word_reg[width_word-8:width_word])
-               [self.source.data[i].eq(word_reg[width_word-8+i]) for i in range(8)]
+               [self.source.data[i].eq(word_reg[width_word-8+i]) for i in range(8)],
+               #self.source.data[8].eq(self.ready_data_read)
         ).Elif(fifo_wrt_cnt == 1,
                #dfifo.write_data.next = word_reg[(width_word-8):(width_word-16)]
                #self.source.data.eq(word_reg[width_word-16:width_word-8])
-               [self.source.data[i].eq(word_reg[width_word-16+i]) for i in range(8)]
+               [self.source.data[i].eq(word_reg[width_word-16+i]) for i in range(8)],
+               #self.source.data[8].eq(self.ready_data_read)
         ).Else(
                #dfifo.write_data.next = 0
                self.source.data.eq(0)
@@ -136,7 +149,8 @@ class HuffmanDatapath(Module):
 
         If(pad_reg == 1,
               #dfifo.write_data.next = pad_byte)
-              self.source.data.eq(pad_byte)
+              self.source.data.eq(pad_byte),
+              #self.source.data[8].eq(self.ready_data_read)
           )
 
         ]
@@ -148,21 +162,31 @@ class HuffmanDatapath(Module):
         If(state == 0,
             If(self.word_count == 0,
             first_rle_word.eq(1),
+            #self.ready_data_write.eq(1),
+            ),
+
+            If(delay == 2,
+            state.eq(1),
             self.ready_data_write.eq(1),
-            state.eq(1)
+            ready_one.eq(1)
+            ).Else(
+            delay.eq(delay+1)
             )
         # VLC state
         ).Elif(state ==1,
            #[word_reg[width_width-1-bit_ptr-i].eq(vlc_d[vlc_size_d-1-i])
            #            for i in range(vlc_size_d)],
-           [If(i < vlc_size_d,
-               word_reg[width_word-1-bit_ptr-i].eq(vlc_d[vlc_size_d-1-i]))
-                     for i in range(width_word)],
-           bit_ptr.eq(bit_ptr + vlc_size_d),
-           self.ready_data_write.eq(0),
-           hfw_running.eq(1),
+           If(ready_one,
 
-                If(hfw_running & ((num_fifo_wrs==0) | (fifo_wrt_cnt+1 == num_fifo_wrs)),
+                [If(i < vlc_size_d,
+                     word_reg[width_word-1-bit_ptr-i].eq(vlc_d[vlc_size_d-1-i]))
+                         for i in range(width_word)],
+                bit_ptr.eq(bit_ptr + vlc_size_d),
+                self.ready_data_write.eq(0),
+                hfw_running.eq(1),
+                ready_one.eq(0)
+
+           ).Elif(hfw_running & ((num_fifo_wrs==0) | (fifo_wrt_cnt == num_fifo_wrs)),
 
                 [If( i+(num_fifo_wrs*8) < width_word,
                        word_reg[i].eq(word_reg[(num_fifo_wrs*8)+i]))
@@ -170,8 +194,10 @@ class HuffmanDatapath(Module):
                 #word_reg.eq(word_reg << (num_fifo_wrs)*8),
                 bit_ptr.eq(bit_ptr - (num_fifo_wrs*8)),
                 hfw_running.eq(0),
+                fifo_wrt_cnt.eq(0),
                 first_rle_word.eq(0),
-                state.eq(2)
+                state.eq(2),
+                ready_one.eq(1)
            )
         # VLI state
         ).Elif(state==2,
@@ -180,13 +206,13 @@ class HuffmanDatapath(Module):
 
                 #[(word_reg[width_word-1-btr_ptr-i].eq(vli_ext[vli_ext_size-1-i]))
                 #                  for i in range(vli_ext_size)],
-                [If( i < vli_ext_size_next_next,
-                     word_reg[width_word-1-bit_ptr-i].eq(vli_ext_next_next[vli_ext_size_next_next-1-i]))
+                [If( i < vli_ext_size_next_next_next,
+                     word_reg[width_word-1-bit_ptr-i].eq(vli_ext_next_next_next[vli_ext_size_next_next_next-1-i]))
                          for i in range(width_word)],
-                bit_ptr.eq(bit_ptr + vli_ext_size_next_next),
+                bit_ptr.eq(bit_ptr + vli_ext_size_next_next_next),
                 hfw_running.eq(1)
 
-           ).Elif(hfw_running & ((num_fifo_wrs==0) | (fifo_wrt_cnt+1 == num_fifo_wrs)),
+           ).Elif(hfw_running & ((num_fifo_wrs==0) | (fifo_wrt_cnt == num_fifo_wrs)),
 
                 [If( i+(num_fifo_wrs*8) < width_word,
                        word_reg[i].eq(word_reg[(num_fifo_wrs*8)+i]))
@@ -194,6 +220,7 @@ class HuffmanDatapath(Module):
                 #word_reg.eq(word_reg << (num_fifo_wrs*8)),
                 bit_ptr.eq(bit_ptr - (num_fifo_wrs*8)),
                 hfw_running.eq(0),
+                fifo_wrt_cnt.eq(0),
 
                 #If()rle_fifo_empty,
                 If(self.word_count==63,
@@ -222,7 +249,7 @@ class HuffmanDatapath(Module):
                 pad_reg.eq(1),
                 bit_ptr.eq(8),
                 hfw_running.eq(1)
-            ).Elif(hfw_running & ( ( num_fifo_wrs == 0 ) | (fifo_wrt_cnt+1 == num_fifo_wrs)),
+            ).Elif(hfw_running & ( ( num_fifo_wrs == 0 ) | (fifo_wrt_cnt == num_fifo_wrs)),
 
                 bit_ptr.eq(0),
                 hfw_running.eq(0),
@@ -238,7 +265,7 @@ class HuffmanEncoder(PipelinedActor, Module):
 
         # Connecting the module to the input and the output.
         self.sink = sink = stream.Endpoint(EndpointDescription(block_layout(20)))
-        self.source = source = stream.Endpoint(EndpointDescription(block_layout(8)))
+        self.source = source = stream.Endpoint(EndpointDescription(block_layout(9)))
 
         # Adding PipelineActor to provide additional clock for the module.
         PipelinedActor.__init__(self, datapath_latency)
@@ -364,8 +391,10 @@ class HuffmanEncoder(PipelinedActor, Module):
 
         # Reading the input from the Datapath only when the output data is valid.
         self.comb += [
-            If(self.datapath.dovalid,
-                source.data.eq(self.datapath.source.data)
+            self.ready_data_read.eq(self.datapath.ready_data_read),
+            If(self.datapath.ready_data_read,
+                source.data.eq(self.datapath.source.data),
+                source.data[8].eq(self.datapath.ready_data_read)
                 )
         ]
 
@@ -373,6 +402,7 @@ class HuffmanEncoder(PipelinedActor, Module):
         self.submodules.read_fsm = read_fsm = FSM(reset_state="GET_RESET")
         read_fsm.act("GET_RESET",
             read_clear.eq(1),
+            self.ready_data_read.eq(1),
             If(read_sel == write_sel,
                 read_swap.eq(1),
                 NextState("READ_OUTPUT")
@@ -387,6 +417,7 @@ class HuffmanEncoder(PipelinedActor, Module):
         that of the IDLE state.
         """
         read_fsm.act("READ_OUTPUT",
+        If(self.ready_data_read,
             source.valid.eq(1),
             source.last.eq(read_count == 63),
             If(source.ready,
@@ -395,17 +426,8 @@ class HuffmanEncoder(PipelinedActor, Module):
                     NextState("GET_RESET")
                 )
             )
+        ).Else(
+            source.valid.eq(0),
+            read_inc.eq(0)
+           )
         )
-
-        #self.comb += [
-        #self.datapath.Amplitude.eq(get_data[i][0:12]),
-        #self.datapath.size.eq(get_data[i][12:16]),
-        #self.datapath.runlength.eq(get_data[i][16:20]),
-        #self.datapath.word_count.eq(write_count)
-        #]
-
-        #i = Signal(reset = 0)
-        #self.sync += [
-        #If(ready_data,
-        #     i.eq(i+1))
-        #]

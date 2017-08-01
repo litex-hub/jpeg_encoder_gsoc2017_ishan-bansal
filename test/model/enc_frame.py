@@ -229,6 +229,7 @@ def huffman_ref(
                 register = register + vlc_ref_s
                 bit_ptr = bit_ptr + int(vlc_size)
 
+
         size_s = str(0) + str(size_block[i]) + 'b'
         if( size_block[i] != 0):
             vli_ref = format(amplitude_block[i],size_s)
@@ -239,14 +240,15 @@ def huffman_ref(
     output_buffer = []
     num_fifo = int(bit_ptr/8)
     for k in range(num_fifo):
-        temp_value = register[k:k+8]
+        temp_value = register[8*k:(8*k)+8]
         output_buffer.append(temp_value)
     if(bit_ptr % 8 !=0):
         pointer = num_fifo*8
         output_buffer.append(register[pointer:])
-
+    output_data = []
     for i in range(num_fifo):
-        print(int(output_buffer[i],2))
+        output_data.append((int(output_buffer[i],2)))
+    return(output_data)
 
 
 

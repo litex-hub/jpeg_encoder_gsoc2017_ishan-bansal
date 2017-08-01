@@ -584,4 +584,13 @@ class Huffman:
         return(self.data)
 
     def reference_module(self, runlength_block, size_block, amplitude_block):
-        huffman_ref(runlength_block, size_block, amplitude_block)
+        return(huffman_ref(runlength_block, size_block, amplitude_block))
+
+    def set_data(self,data):
+        self.data = data
+        get_output = []
+        for i in range(len(data)):
+            temp_data = int(data[i]/256)
+            if(temp_data == 1):
+                get_output.append((data[i]%256))
+        print(get_output)
