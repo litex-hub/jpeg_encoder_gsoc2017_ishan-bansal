@@ -250,12 +250,6 @@ def huffman_ref(
         output_data.append((int(output_buffer[i],2)))
     return(output_data)
 
-
-
-def huffman(block):
-    return block
-
-
 if __name__ == '__main__':
     (r88_blocks,g88_blocks,b88_blocks) = readRgbImageBlocks("24x24.bmp")
     height = 24

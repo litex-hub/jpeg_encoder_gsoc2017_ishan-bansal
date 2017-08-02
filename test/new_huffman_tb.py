@@ -12,7 +12,6 @@ from litejpeg.core.huffman.huffmancore import HuffmanEncoder
 from common import *
 
 # Testbanch for the Huffman module.
-
 """
 Under this module a matrix containing 64 blocks is been sent as an
 input to the Huffman and the output is been printed and compared
@@ -30,9 +29,13 @@ class TB(Module):
                    Streamer[16:20] = Runlength
 
         Logger : It will get the output to the TestBench.
-                 The output of the testBench is the variable length values of the
-                 ranging from 0,8 or 16 bits depending upon the encoding done
-                 as per the huffman tables.
+                 The output of the HuffmanEncoder is of 9 bits
+                 after the serialization of the input data.
+                 8 bits for the data.
+                 1 bit to decide wheather the data is valid or not.
+                 Logger[0:8] = Output of the HuffmanEncoder
+                 Logger[9] = Valid bit
+
         """
         self.submodules.streamer = PacketStreamer(EndpointDescription([("data", 20)]))
         self.submodules.huffman = HuffmanEncoder()
@@ -49,16 +52,12 @@ def main_generator(dut):
 
     # Results from the implemented module.
     model2 = Huffman()
-    #print("Input data given to the Huffman:")
 
     print("Output of the reference module:")
     Reference_model = model2.reference_module(model2.runlength_test_y ,
                             model2.vli_size_test_y,
                             model2.vli_test_y)
     print(Reference_model)
-    #print("Amplitude :: Size :: Runlength")
-    #for i in range(64):
-    #    print(model2.vli_test_y[i], model2.vli_size_test_y[i], model2.runlength_test_y[i])
 
     input_data = model2.concat_input(
                  model2.vli_test_y,
@@ -70,7 +69,6 @@ def main_generator(dut):
         dut.streamer.send(packet)
         yield from dut.logger.receive()
         model2.set_data(dut.logger.packet)
-        #print(dut.logger.packet)
 
 # Going through the main module
 if __name__ == "__main__":
