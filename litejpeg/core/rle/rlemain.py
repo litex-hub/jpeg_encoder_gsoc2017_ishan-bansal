@@ -1,13 +1,3 @@
-# RLEmain
-from litex.gen import *
-from litex.soc.interconnect.stream import *
-from litex.soc.interconnect.stream_sim import *
-
-from litejpeg.core.common import *
-
-from litejpeg.core.rle.entropycoder import Entropycoder
-from litejpeg.core.rle.rlecore import Runlength
-
 """
 RLE main:
 ---------
@@ -25,6 +15,16 @@ source : 21 bits
          to some other module.
 """
 
+from litex.gen import *
+from litex.soc.interconnect.stream import *
+from litex.soc.interconnect.stream_sim import *
+
+from litejpeg.core.common import *
+
+from litejpeg.core.rle.entropycoder import EntropyCoder
+from litejpeg.core.rle.rlecore import RunLength
+
+
 # To keep the output in sync with the input.
 # Addition of a delay of 3 clock cycles.
 datapath_latency = 3
@@ -39,8 +39,8 @@ class RLEmain(PipelinedActor, Module):
         PipelinedActor.__init__(self, datapath_latency)
         self.latency = datapath_latency
 
-        self.submodules.rlecore = Runlength()
-        self.submodules.entropycoder = Entropycoder()
+        self.submodules.rlecore = RunLength()
+        self.submodules.entropycoder = EntropyCoder()
 
         self.comb += [
             # Connecting RLEcore with the test bench.

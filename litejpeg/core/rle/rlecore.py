@@ -1,11 +1,3 @@
-# RLE Core Module
-
-# Importing libraries.
-from litex.gen import *
-from litex.soc.interconnect.stream import *
-
-from litejpeg.core.common import *
-
 """
 RLE Core Module:
 ----------------
@@ -20,6 +12,11 @@ Amplitude: It is the non-zero number present in the input matrix.
 Runlength : It is the number of zeros before the non-zero Amplitude.
 """
 
+# Importing libraries.
+from litex.gen import *
+from litex.soc.interconnect.stream import *
+
+from litejpeg.core.common import *
 
 # To provide delay so in order to sink the data coming from the main
 # module to that of the Datapath module.
@@ -50,7 +47,14 @@ class RLEDatapath(Module):
         the DC cofficient of the previous value of the DC matrix.
 
         The AC cofficients are been encoded by calculating the number of zeros
-        before the non-zero AC cofficient called as the RUnlength.
+        before the non-zero AC cofficient called as the Runlength.
+
+        Their is a need of seperate DC/AC cofficients because as the first element
+        of the matrix is the DC cofficient so we already know that the
+        runlength value for DC = 0
+        Therefore while doing huffman encoding we do not want to waste our
+        memory saying the runlength to be zero, that why we take it separate
+        from the rest of the AC cofficients.
 
         Parameters:
         -----------
@@ -161,12 +165,14 @@ class RLEDatapath(Module):
         ]
 
 
-class Runlength(PipelinedActor, Module):
+class RunLength(PipelinedActor, Module):
     """
     This module will connect the Rle core datapath with the input
     and output either from other modules or from the Test Benches.
     The input is been taken from the sink and source and is been
     transferred to the RLE core datapath by using read and write count.
+    The RLEdatapath will than calculate the number of zeros between two
+    consecutive non-zero numbers and give the output as runlength.
     """
     def __init__(self):
 

@@ -1,13 +1,5 @@
-# Entropycoder Module
-
-# Importing libraries.
-from litex.gen import *
-from litex.soc.interconnect.stream import *
-
-from litejpeg.core.common import *
-
 """
-Entropycoder Module:
+EntropyCoder Module:
 ----------------
 This module is been made in order to calculate the number of bits to
 store the Amplitude.
@@ -19,6 +11,12 @@ input_data :
 size :
     Contains the number of bits in the Amplitude.
 """
+
+# Importing libraries.
+from litex.gen import *
+from litex.soc.interconnect.stream import *
+
+from litejpeg.core.common import *
 
 
 # To provide delay so in order to sink the data coming from the main
@@ -38,7 +36,6 @@ class EntropyDatapath(Module):
     Parameters:
     -----------
     sink : Get the input from the other modules.
-           The input is the modulus of the input.
     source : Give the output to the other modules.
     input_data : modulus of input of the matrix.
     get_data : Contains the temporary data for calculating the size.
@@ -68,7 +65,9 @@ class EntropyDatapath(Module):
 
         # Storing the size in the input_data.
         self.sync += input_data.eq(sink.data)
-        # Interating over different values from 1 to 12.
+        # Keep on interating over the input_data and see after shifting
+        # how many bits the input_data value becomes zeros and that is the
+        # number of bits required to store the input_data.
         for i in range(12):
             self.sync += get_data[i].eq(input_data >> i)
         for i in range(12):
@@ -81,20 +80,20 @@ class EntropyDatapath(Module):
         self.comb += source.data.eq(size)
 
 
-class Entropycoder(PipelinedActor, Module):
+class EntropyCoder(PipelinedActor, Module):
     """
     This module will connect the Entropycoder datapath with the input
     and output either from other modules or from the Test Benches.
     The input is been taken from the sink and source and is been transferred to
     the Entropycoder datapath by using read and write count.
+    The entrophycoder will extract out the number of bits required to store
+    the amplitude.
     """
-    def __init__(self):
 
+    def __init__(self):
         # Connecting the module to the input and the output.
-        self.sink = sink = stream.Endpoint(
-                               EndpointDescription(block_layout(12)))
-        self.source = source = stream.Endpoint(
-                                   EndpointDescription(block_layout(4)))
+        self.sink = sink = stream.Endpoint(EndpointDescription(block_layout(12)))
+        self.source = source = stream.Endpoint(EndpointDescription(block_layout(4)))
 
         # Adding PipelineActor to provide additional clock for the module.
         PipelinedActor.__init__(self, datapath_latency)
@@ -161,7 +160,9 @@ class Entropycoder(PipelinedActor, Module):
         WRITE_INPUT State
 
         Will increament the value of the write_count at every positive edge
-        of the clock cycle till 63 and write the data into the memory
+        of the clock cycle till 63 since we are getting a matrix of 64 blocks
+        hence at write_count equal to 63 it generate a signal saying this to be
+        the last block of the matrix and write the data into the memory
         as per the data from the ``sink.data`` and when the value reaches 63
         the state again changes to that of the GET_RESET state.
         """

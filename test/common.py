@@ -366,7 +366,9 @@ class RLE:
     These class is been created in order to store the value or the matrix which
     are been used to test the RLE module.
     The matrix are from github repositories for the purpose of input for
-    testing.
+    testing. As the matrix is sent as an input similar to that come from
+    the quantization module so the data is been processed and the output
+    is been compared with the soft version.
     """
     def __init__(self):
         self.red_pixels_1 = [
@@ -381,7 +383,7 @@ class RLE:
                        ]
 
 
-        red_pixels_2 = [
+        self.red_pixels_2 = [
                         0, 12, 20,  0,  0,   2,   3,  4,
                         0, 0,  2,  3,  4,   5,   1,  0,
                         0,  0,  0,  0,  0,   0,  90,  0,
@@ -392,7 +394,7 @@ class RLE:
                         0,  0,  0,  0,  0,   0,   0,  0
                        ]
 
-        green_pixels_1 = [
+        self.green_pixels_1 = [
                           11, 12, 0,  0, 0, 0, 0, 0,
                            0,  0, 0,  0, 0, 0, 0, 0,
                            0,  0, 0, 10, 2, 3, 4, 0,
@@ -403,7 +405,7 @@ class RLE:
                            0,  0, 0,  0, 1, 0, 0, 0
                          ]
 
-        green_pixels_2 = [
+        self.green_pixels_2 = [
                           13, 12, 20,  0,  0,   0,   0,  0,
                            0,  0,  0,  0,  0,   0,   0,  0,
                            0,  0,  0,  0,  0,   0,   0,  0,
@@ -414,7 +416,7 @@ class RLE:
                            1,  0,  0,  0,  1,  32,   4,  2
                           ]
 
-        blue_pixels_1 = [
+        self.blue_pixels_1 = [
                          11, 12, 0,  0, 0, 0, 0, 0,
                           0,  0, 0,  0, 0, 0, 0, 0,
                           0,  0, 0,  0, 0, 0, 0, 0,
@@ -425,7 +427,7 @@ class RLE:
                           0,  0, 0,  0, 0, 0, 0, 1
                         ]
 
-        blue_pixels_2 = [
+        self.blue_pixels_2 = [
                          16, 12, 20,  0,  0,   2,   3,  4,
                           0,  0,  2,  3,  4,   5,   1,  0,
                           0,  0,  0,  0,  0,   0,  90,  0,
@@ -442,22 +444,31 @@ class RLE:
         self.data = data
         for i in range(64):
             temp=self.data[i]
-            Amplitude = temp%4096
+            # Since the data we get contains amplitude, runlength as a single
+            # number therefore in order to extracts the two we take the modulus
+            # by 4096 to get last 12 bits and than shift and than again extracts
+            # the next 4 representing runlength.
+            amplitude = temp%4096
             temp = temp >> 12
             runlength = temp % 16
             temp = temp >> 4
             if(temp):
-                print("%s,%s"%(Amplitude,runlength))
+                print("%s,%s"%(amplitude,runlength))
 
     def set_rledata(self,data):
         self.data = data
         for i in range(64):
             temp = self.data[i]
-            Amplitude = temp%4096
+            # Since the data we get contains amplitude, runlength as a single
+            # number therefore in order to extracts the two we take the modulus
+            # by 4096 to get last 12 bits and than shift and than again extracts
+            # the next 4 representing runlength, similarly next 4 to get
+            # size of the amplitude.
+            amplitude = temp%4096
             temp = self.data[i] >> 12
             size = temp%16
             temp = temp >> 4
             runlength = temp%16
             temp = temp >> 4
             if(temp):
-                print("%s,%s,%s"%(Amplitude,runlength,size))
+                print("%s,%s,%s"%(amplitude,runlength,size))

@@ -1,13 +1,13 @@
+# !/usr/bin/env python3
 # This is the module for testing the RLEcore.
 
-# !/usr/bin/env python3
 from litex.gen import *
 
 from litex.soc.interconnect.stream import *
 from litex.soc.interconnect.stream_sim import *
 
 from litejpeg.core.common import *
-from litejpeg.core.rle.rlecore import Runlength
+from litejpeg.core.rle.rlecore import RunLength
 
 from common import *
 
@@ -32,7 +32,7 @@ class TB(Module):
                  logger[12:16] : Runlength
         """
         self.submodules.streamer = PacketStreamer(EndpointDescription([("data", 12)]))
-        self.submodules.runlength = Runlength()
+        self.submodules.runlength = RunLength()
         self.submodules.logger = PacketLogger(EndpointDescription([("data", 17)]))
 
         # Connecting TestBench with the RLEcore module.

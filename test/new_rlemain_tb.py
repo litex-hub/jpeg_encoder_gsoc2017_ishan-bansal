@@ -1,6 +1,6 @@
+# !/usr/bin/env python3
 # This is the module for testing the RLEmain.
 
-# !/usr/bin/env python3
 from litex.gen import *
 
 from litex.soc.interconnect.stream import *
