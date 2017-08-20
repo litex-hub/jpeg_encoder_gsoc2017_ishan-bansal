@@ -1,5 +1,5 @@
 """
-RLE main:
+RLEMain:
 ---------
 This module is responsible for dividing the input within the RLEcore and
 the Entrophycoder module. The results are than combined and given
@@ -21,9 +21,9 @@ from litejpeg.core.rle.rlecore import RunLength
 datapath_latency = 3
 
 
-class RLEmain(PipelinedActor, Module):
+class RLEMain(PipelinedActor, Module):
     """
-    RLEmain :
+    RLEMain :
     ---------
     This is responsible for combining the outputs of both the EntropyCoder and
     RLE core as the output will contain the amplitude in the last 12 bits along
@@ -32,7 +32,7 @@ class RLEmain(PipelinedActor, Module):
     All these information is been synchronized once by the RLEmain and than
     given as an output to the next module.
 
-    Parameters :
+    Attributes :
     ------------
     sink : 12 bits
            Receives the information from the previous module.

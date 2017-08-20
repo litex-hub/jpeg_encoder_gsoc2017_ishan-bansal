@@ -365,8 +365,10 @@ class RLE:
     """
     These class is been created in order to store the value or the matrix which
     are been used to test the RLE module.
-    The matrix are from github repositories for the purpose of input for
-    testing. As the matrix is sent as an input similar to that come from
+    The matrix input are taken from the github repository with the link as :
+    https://github.com/cfelton/test_jpeg/blob/master/test/rle_test_inputs.py
+    for the purpose of input for testing.
+    As the matrix is sent as an input similar to that come from
     the quantization module so the data is been processed and the output
     is been compared with the soft version.
     """
@@ -446,7 +448,8 @@ class RLE:
             temp=self.data[i]
             # Since the data we get contains amplitude, runlength as a single
             # number therefore in order to extracts the two we take the modulus
-            # by 4096 to get last 12 bits and than shift and than again extracts
+            # by 4096 to get last 12 bits as the size of the amplitude is equal
+            # to 12 bits and than shift and than again extracts
             # the next 4 representing runlength.
             amplitude = temp%4096
             temp = temp >> 12
@@ -460,10 +463,10 @@ class RLE:
         for i in range(64):
             temp = self.data[i]
             # Since the data we get contains amplitude, runlength as a single
-            # number therefore in order to extracts the two we take the modulus
-            # by 4096 to get last 12 bits and than shift and than again extracts
-            # the next 4 representing runlength, similarly next 4 to get
-            # size of the amplitude.
+            # number therefore in order to extracts the them we take the modulus
+            # by 4096 to get last 12 bits as the size of the amplitude is 12 bits
+            # and than shift and than again extracts the next 4 representing
+            # runlength, similarly next 4 to get size of the amplitude.
             amplitude = temp%4096
             temp = self.data[i] >> 12
             size = temp%16

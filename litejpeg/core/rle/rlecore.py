@@ -1,8 +1,14 @@
 """
 RLE Core Module:
 ----------------
-This module is the core module for the Rle for calculating
-the Amplitude and the Zero_count of the input data.
+This module is the core module for the RLE for calculating
+the amplitude and the zero_count of the input data.
+amplitudes are the non-zero elements present in the matrix
+and zero_count is the number of zeros before the non-zero
+amplitude.
+This helps is the reduction of data as no more memory is
+required to store all the zeros instead a runlength is
+sufficient for storing all the zeros.
 """
 
 # Importing libraries.
@@ -23,51 +29,47 @@ datapath_latency = 3
 
 
 class RLEDatapath(Module):
+    """
+    RLEDatapath Module:
+    -------------------
+    This module is the datapath set for the steps required for
+    the RLE module to take place.
 
+    The input matrix contains two components,
+    the first value of the matrix is called as the DC component and
+    the rest of the values within the matrix are the AC component.
+
+    The DC part is been encoded by subtracting the DC cofficient to that of
+    the DC cofficient of the previous value of the DC matrix.
+
+    The AC cofficients are been encoded by calculating the number of zeros
+    before the non-zero AC cofficient called as the Runlength.
+
+    Their is a need of seperate DC/AC cofficients because as the first element
+    of the matrix is the DC cofficient so we already know that the
+    runlength value for DC = 0
+    Therefore while doing huffman encoding we do not want to waste our
+    memory saying the runlength to be zero, that why we take it separate
+    from the rest of the AC cofficients.
+
+    Attributes:
+    -----------
+    accumulator: Storing the non-zero AC or DC cofficient.
+
+    runlength : for calculating the number of zeros before the non-zero AC
+    cofficients.
+
+    dovalid : indicate wheather the output data is valid or not.
+
+    zero_count: Count the number of zeros.
+
+    prev_dc_0 : Storing the previous value of DC component.
+
+    sink : To take the input data to the Datapath module.
+
+    source : To transfer the output data to the Datapath module.
+    """
     def __init__(self):
-
-        """
-        RLEDatapath Module:
-        -------------------
-        This module is the datapath set for the steps required for
-        the RLE module to take place.
-
-        The input matrix contains two components,
-        the first value of the matrix is called as the DC component and
-        the rest of the values within the matrix are the AC component.
-
-        The DC part is been encoded by subtracting the DC cofficient to that of
-        the DC cofficient of the previous value of the DC matrix.
-
-        The AC cofficients are been encoded by calculating the number of zeros
-        before the non-zero AC cofficient called as the Runlength.
-
-        Their is a need of seperate DC/AC cofficients because as the first element
-        of the matrix is the DC cofficient so we already know that the
-        runlength value for DC = 0
-        Therefore while doing huffman encoding we do not want to waste our
-        memory saying the runlength to be zero, that why we take it separate
-        from the rest of the AC cofficients.
-
-        Parameters:
-        -----------
-        accumulator: Storing the non-zero AC or DC cofficient.
-
-        runlength : for calculating the number of zeros before the non-zero AC
-        cofficients.
-
-        dovalid : indicate wheather the output data is valid or not.
-
-        zero_count: Count the number of zeros.
-
-        prev_dc_0 : Storing the previous value of DC component.
-
-        sink : To take the input data to the Datapath module.
-
-        source : To transfer the output data to the Datapath module.
-
-
-        """
 
         """
         Intialising the variable for the Datapath module.
@@ -160,14 +162,14 @@ class RLEDatapath(Module):
 
 class RunLength(PipelinedActor, Module):
     """
-    This module will connect the Rle core datapath with the input
+    This module will connect the RLE core datapath with the input
     and output either from other modules or from the Test Benches.
     The input is been taken from the sink and source and is been
     transferred to the RLE core datapath by using read and write count.
     The RLEdatapath will than calculate the number of zeros between two
     consecutive non-zero numbers and give the output as runlength.
 
-    Parameters :
+    Attributes :
     ------------
     sink : 12 bits
            receives data from the RLEmain containing the amplitude.
@@ -176,6 +178,10 @@ class RunLength(PipelinedActor, Module):
              12 bits : amplitude
              4 bits : runlength
              1 bit : data_valid
+    write_swap, read_swap : 1 bit
+            To transmit the control from read to write or vice-versa in case
+            if one of them completes its execution, that is if all the data is
+            read or all the data is been written on the output.
     """
     def __init__(self):
 
@@ -194,7 +200,7 @@ class RunLength(PipelinedActor, Module):
         self.comb += self.datapath.ce.eq(self.pipe_ce)
 
         # Intialising the variables.
-
+        BLOCK_COUNT = 64
         # Check wheather to start write or not.
         write_sel = Signal()
         # To swap the write select.
@@ -235,14 +241,14 @@ class RunLength(PipelinedActor, Module):
         ]
 
         """
-        GET_RESET.
+        INIT
 
         Depending on the value of the read_sel and write_sel decide
         wheather the next state will be either read or write.
         Will clear the value of ``write_count`` to be 0.
         """
-        self.submodules.write_fsm = write_fsm = FSM(reset_state="GET_RESET")
-        write_fsm.act("GET_RESET",
+        self.submodules.write_fsm = write_fsm = FSM(reset_state="INIT")
+        write_fsm.act("INIT",
                       write_clear.eq(1),
                       If(write_sel != read_sel,
                          NextState("WRITE_INPUT")))
@@ -258,9 +264,9 @@ class RunLength(PipelinedActor, Module):
         write_fsm.act("WRITE_INPUT",
                       sink.ready.eq(1),
                       If(sink.valid,
-                         If(write_count == 63,
+                         If(write_count == BLOCK_COUNT-1,
                             write_swap.eq(1),
-                            NextState("GET_RESET")
+                            NextState("INIT")
                             ).Else(
                                    write_inc.eq(1))))
 
@@ -286,8 +292,8 @@ class RunLength(PipelinedActor, Module):
         ]
 
         # GET_RESET state
-        self.submodules.read_fsm = read_fsm = FSM(reset_state="GET_RESET")
-        read_fsm.act("GET_RESET",
+        self.submodules.read_fsm = read_fsm = FSM(reset_state="INIT")
+        read_fsm.act("INIT",
                      read_clear.eq(1),
                      If(read_sel == write_sel,
                         read_swap.eq(1),
@@ -303,8 +309,8 @@ class RunLength(PipelinedActor, Module):
         """
         read_fsm.act("READ_OUTPUT",
                      source.valid.eq(1),
-                     source.last.eq(read_count == 63),
+                     source.last.eq(read_count == BLOCK_COUNT-1),
                      If(source.ready,
                         read_inc.eq(1),
                         If(source.last,
-                           NextState("GET_RESET"))))
+                           NextState("INIT"))))

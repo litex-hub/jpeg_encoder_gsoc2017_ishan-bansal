@@ -2,7 +2,7 @@
 EntropyCoder Module:
 ----------------
 This module is been made in order to calculate the number of bits to
-store the Amplitude.
+store the amplitude used in the huffman encoding.
 """
 
 # Importing libraries.
@@ -19,23 +19,22 @@ datapath_latency = 3
 
 @CEInserter()
 class EntropyDatapath(Module):
-
     """
     EntropyDatapath :
     ------------------
-    It contains the steps for the Entropycoder to calculate the bits for the
+    It contains the steps for the EntropyCoder to calculate the bits for the
     Amplitude to store.
 
-    Parameters:
+    Attributes:
     -----------
-    sink : Get the input from the other modules.
-    source : Give the output to the other modules.
-    input_data : modulus of input of the matrix.
+    sink : Get the input from the Entrophycoder.
+    source : Give the output to the Entrophycoder.
+    input_data : for temporary storing the value of input, used
+                 for calculating size.
     get_data : Contains the temporary data for calculating the size.
     size : The number of bits required for storing th amplitude.
 
     """
-
     def __init__(self):
 
         # Record the input and output of the Datapath.
@@ -82,12 +81,16 @@ class EntropyCoder(PipelinedActor, Module):
     The entrophycoder will extract out the number of bits required to store
     the amplitude.
 
-    Parameters :
+    Attributes :
     ------------
     sink : 12 bits
            receives input from the RLEmain containing the amplitude.
     source : 4 bits
              transmit the number of bits required to store the amplitude.
+    write_swap, read_swap : 1 bit
+            To transmit the control from read to write or vice-versa in case
+            if one of them completes its execution, that is if all the data is
+            read or all the data is been written on the output.
     """
 
     def __init__(self):
@@ -104,7 +107,7 @@ class EntropyCoder(PipelinedActor, Module):
         self.comb += self.datapath.ce.eq(self.pipe_ce)
 
         # Intialising the variables.
-
+        BLOCK_COUNT = 64
         # Check wheather to start write or not.
         write_sel = Signal()
         # To swap the write select.
@@ -144,14 +147,14 @@ class EntropyCoder(PipelinedActor, Module):
         ]
 
         """
-        GET_RESET.
+        INIT
 
         Depending on the value of the read_sel and write_sel decide wheather
         the next state will be either read or write.
         Will clear the value of ``write_count`` to be 0.
         """
-        self.submodules.write_fsm = write_fsm = FSM(reset_state="GET_RESET")
-        write_fsm.act("GET_RESET",
+        self.submodules.write_fsm = write_fsm = FSM(reset_state="INIT")
+        write_fsm.act("INIT",
                       write_clear.eq(1),
                       If(write_sel != read_sel,
                          NextState("WRITE_INPUT")))
@@ -169,9 +172,9 @@ class EntropyCoder(PipelinedActor, Module):
         write_fsm.act("WRITE_INPUT",
                       sink.ready.eq(1),
                       If(sink.valid,
-                         If(write_count == 63,
+                         If(write_count == BLOCK_COUNT-1,
                             write_swap.eq(1),
-                            NextState("GET_RESET")
+                            NextState("INIT")
                             ).Else(
                                    write_inc.eq(1))))
 
@@ -196,8 +199,8 @@ class EntropyCoder(PipelinedActor, Module):
         ]
 
         # GET_RESET state
-        self.submodules.read_fsm = read_fsm = FSM(reset_state="GET_RESET")
-        read_fsm.act("GET_RESET",
+        self.submodules.read_fsm = read_fsm = FSM(reset_state="INIT")
+        read_fsm.act("INIT",
                      read_clear.eq(1),
                      If(read_sel == write_sel,
                         read_swap.eq(1),
@@ -213,8 +216,8 @@ class EntropyCoder(PipelinedActor, Module):
         """
         read_fsm.act("READ_OUTPUT",
                      source.valid.eq(1),
-                     source.last.eq(read_count == 63),
+                     source.last.eq(read_count == BLOCK_COUNT-1),
                      If(source.ready,
             	        read_inc.eq(1),
                         If(source.last,
-                           NextState("GET_RESET"))))
+                           NextState("INIT"))))

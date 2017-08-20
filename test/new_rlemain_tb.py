@@ -7,7 +7,7 @@ from litex.soc.interconnect.stream import *
 from litex.soc.interconnect.stream_sim import *
 
 from litejpeg.core.common import *
-from litejpeg.core.rle.rlemain import RLEmain
+from litejpeg.core.rle.rlemain import RLEMain
 
 from common import *
 
@@ -26,7 +26,7 @@ class TB(Module):
                  data[21] dvalid
         """
         self.submodules.streamer = PacketStreamer(EndpointDescription([("data", 12)]))
-        self.submodules.rlemain = RLEmain()
+        self.submodules.rlemain = RLEMain()
         self.submodules.logger = PacketLogger(EndpointDescription([("data", 21)]))
 
         # Connecting TestBench with the Entropycoder module.
