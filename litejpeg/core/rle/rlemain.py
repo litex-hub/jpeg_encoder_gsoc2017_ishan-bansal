@@ -4,15 +4,6 @@ RLE main:
 This module is responsible for dividing the input within the RLEcore and
 the Entrophycoder module. The results are than combined and given
 to the output.
-
-Parameters:
------------
-sink : 12 bits
-       Recieves an input of 12 bits either from test bench or from
-       other modules.
-source : 21 bits
-         Transmits an output of about 21 bits either to the test bench or
-         to some other module.
 """
 
 from litex.gen import *
@@ -31,6 +22,27 @@ datapath_latency = 3
 
 
 class RLEmain(PipelinedActor, Module):
+    """
+    RLEmain :
+    ---------
+    This is responsible for combining the outputs of both the EntropyCoder and
+    RLE core as the output will contain the amplitude in the last 12 bits along
+    with the number of bits to store the amplitude as the next 4 bits and
+    finally the RunLength for the next 4 bits.
+    All these information is been synchronized once by the RLEmain and than
+    given as an output to the next module.
+
+    Parameters :
+    ------------
+    sink : 12 bits
+           Receives the information from the previous module.
+    source : 21 bits
+             Transfer the information to the next module.
+             12 bits : amplitude
+             4 bits : size
+             4 bits : runlength
+             1 bit : data_valid
+    """
     def __init__(self):
         self.sink = sink = stream.Endpoint(
                                EndpointDescription(block_layout(12)))

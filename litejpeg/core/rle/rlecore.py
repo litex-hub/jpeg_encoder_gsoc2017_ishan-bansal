@@ -3,13 +3,6 @@ RLE Core Module:
 ----------------
 This module is the core module for the Rle for calculating
 the Amplitude and the Zero_count of the input data.
-
-Parameter:
-----------
-
-Amplitude: It is the non-zero number present in the input matrix.
-
-Runlength : It is the number of zeros before the non-zero Amplitude.
 """
 
 # Importing libraries.
@@ -173,6 +166,16 @@ class RunLength(PipelinedActor, Module):
     transferred to the RLE core datapath by using read and write count.
     The RLEdatapath will than calculate the number of zeros between two
     consecutive non-zero numbers and give the output as runlength.
+
+    Parameters :
+    ------------
+    sink : 12 bits
+           receives data from the RLEmain containing the amplitude.
+    source : 17 bits
+             transmit output to the RLEmain
+             12 bits : amplitude
+             4 bits : runlength
+             1 bit : data_valid
     """
     def __init__(self):
 

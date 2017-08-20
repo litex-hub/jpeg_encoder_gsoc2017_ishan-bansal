@@ -3,13 +3,6 @@ EntropyCoder Module:
 ----------------
 This module is been made in order to calculate the number of bits to
 store the Amplitude.
-
-Parameters:
------------
-input_data :
-    Contains the input data coming from the other modules or the Test Benches.
-size :
-    Contains the number of bits in the Amplitude.
 """
 
 # Importing libraries.
@@ -88,6 +81,13 @@ class EntropyCoder(PipelinedActor, Module):
     the Entropycoder datapath by using read and write count.
     The entrophycoder will extract out the number of bits required to store
     the amplitude.
+
+    Parameters :
+    ------------
+    sink : 12 bits
+           receives input from the RLEmain containing the amplitude.
+    source : 4 bits
+             transmit the number of bits required to store the amplitude.
     """
 
     def __init__(self):
