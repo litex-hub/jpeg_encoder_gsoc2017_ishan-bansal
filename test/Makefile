@@ -17,6 +17,12 @@ ycbcr_resampling_tb:
 zigzag_tb:
 	$(CMD) zigzag_tb.py
 
+dct_tb:
+	$(CMD) dct_tb.py
+
+quantization_tb:
+	$(CMD) quantization_tb.py
+
 clean:
 	rm -rf *_*.png *.vvp *.v *.vcd
 

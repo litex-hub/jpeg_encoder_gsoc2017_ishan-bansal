@@ -5,10 +5,22 @@ from litex.soc.interconnect.stream import *
 
 from litejpeg.core.common import *
 
-# TODO:
-# - see if we can regroup some stages without impacting timings (would reduce latency and registers).
+""" Conversion of RGB2YCbCr Module
+    ==============================
+
+    This module takes the blocks in the form of serial input for 24 bits.
+    Each of the 24 bits contains 8 bits for each of R,G and B.
+    It undergo a number of mathematical operations on these bits to change them into
+    YCbCr. 
+    The reason behind this is because the new attributes that are Y,Cb and Cr they have a 
+    special property in which the image is not much affected with the change of Cb and Cr
+    as compared to in the previous case. Hence a number of different steps were been taken in 
+    order that the compression must be maximum.
+"""
+
 
 def rgb2ycbcr_coefs(dw, cw=None):
+    # return : The value of various constants required for the modules below.
     return {
         "ca" : coef(0.1819, cw),
         "cb" : coef(0.0618, cw),
@@ -28,6 +40,24 @@ datapath_latency = 8
 
 @CEInserter()
 class RGB2YCbCrDatapath(Module):
+    """
+    Datapath of the RGB2YCbCr Module.
+    ---------------------------------
+    This module will provide the datapath required for the RGB2YCbcr module.
+    Since a number of different multiplication and addition operations are required for the purpose of 
+    the conversion of the rgb into ycbcr hence are to be taken in the form of several stages.
+
+    Inputs:
+    -------
+    r : 8 bit number contains the red gradient of a particular pixel.
+    g : 8 bit number contains the green gradient of a particular pixel.
+    b : 8 bit number contains the blue gradient of a particular pixel.
+
+    Return:
+    -------
+    y, cb and cr : each an 8 bit number formed from the r,g and b component obtained as input.
+
+    """
     def __init__(self, rgb_w, ycbcr_w, coef_w):
         self.sink = sink = Record(rgb_layout(rgb_w))
         self.source = source = Record(ycbcr444_layout(ycbcr_w))
@@ -36,7 +66,9 @@ class RGB2YCbCrDatapath(Module):
 
         coefs = rgb2ycbcr_coefs(ycbcr_w, coef_w)
 
-        # delay rgb signals
+        # Since the output doesn't come in a single clock cycle. Hence there is a need of
+        # providing delay in the output which is determined by datapath_latency of the
+        # module and provided as below:
         rgb_delayed = [sink]
         for i in range(datapath_latency):
             rgb_n = Record(rgb_layout(rgb_w))
@@ -46,9 +78,9 @@ class RGB2YCbCrDatapath(Module):
 
         # Hardware implementation:
         # (Equation from XAPP930)
-        #    y = ca*(r-g) + g + cb*(b-g) + yoffset
-        #   cb = cc*(r-y) + coffset
-        #   cr = cd*(b-y) + coffset
+        # y = ca*(r-g) + g + cb*(b-g) + yoffset
+        # cb = cc*(r-y) + coffset
+        # cr = cd*(b-y) + coffset
 
         # stage 1
         # (r-g) & (b-g)
@@ -129,7 +161,16 @@ class RGB2YCbCrDatapath(Module):
 
 
 class RGB2YCbCr(PipelinedActor, Module):
+    """
+    Providing the link of the module with that of the input and output.
+    -------------------------------------------------------------------
+    This will take the input in the form required for the RGB2YCbCr module and 
+    recieve the output from the module and convert it in the required format.
+
+    """
     def __init__(self, rgb_w=8, ycbcr_w=8, coef_w=8):
+
+        # Providing the link between the module and input and output.
         self.sink = sink = stream.Endpoint(EndpointDescription(rgb_layout(rgb_w)))
         self.source = source = stream.Endpoint(EndpointDescription(ycbcr444_layout(ycbcr_w)))
         PipelinedActor.__init__(self, datapath_latency)
@@ -137,7 +178,11 @@ class RGB2YCbCr(PipelinedActor, Module):
 
         # # #
 
+    
+        # Connecting the datapath with the input and output.
         self.submodules.datapath = RGB2YCbCrDatapath(rgb_w, ycbcr_w, coef_w)
+        
+        # Providing input and output to the datapath.
         self.comb += self.datapath.ce.eq(self.pipe_ce)
         for name in ["r", "g", "b"]:
             self.comb += getattr(self.datapath.sink, name).eq(getattr(sink, name))
@@ -147,6 +192,7 @@ class RGB2YCbCr(PipelinedActor, Module):
 
 
 def ycbcr2rgb_coefs(dw, cw=None):
+    # returns the various cofficients required for the module below.
     ca = 0.1819
     cb = 0.0618
     cc = 0.6495
@@ -169,11 +215,27 @@ def ycbcr2rgb_coefs(dw, cw=None):
         "dcoef": coef(1/cc, xcoef_w)
     }
 
-datapath_latency = 4
-
 
 @CEInserter()
 class YCbCr2RGBDatapath(Module):
+    """
+    Datapath of the YCbCr2RGB Module.
+    ---------------------------------
+    This module will provide the datapath required for the YCbCr2RGB module.
+    Since a number of different multiplication and addition operations are required for the purpose of 
+    the conversion of the ycbcr into rgb hence are to be taken in the form of several stages.
+
+    Inputs:
+    -------
+    y : 8 bit number contains the red gradient of a particular pixel.
+    cb : 8 bit number contains the green gradient of a particular pixel.
+    cr : 8 bit number contains the blue gradient of a particular pixel.
+
+    Return:
+    -------
+    r, g and b : each an 8 bit number formed from the r,g and b component obtained as input.
+
+    """
     def __init__(self, ycbcr_w, rgb_w, coef_w):
         self.sink = sink = Record(ycbcr444_layout(ycbcr_w))
         self.source = source = Record(rgb_layout(rgb_w))
@@ -182,7 +244,9 @@ class YCbCr2RGBDatapath(Module):
 
         coefs = ycbcr2rgb_coefs(rgb_w, coef_w)
 
-        # delay ycbcr signals
+        # Since the output doesn't come in a single clock cycle. Hence there is a need of
+        # providing delay in the output which is determined by datapath_latency of the
+        # module and provided as below:
         ycbcr_delayed = [sink]
         for i in range(datapath_latency):
             ycbcr_n = Record(ycbcr444_layout(ycbcr_w))
@@ -245,7 +309,16 @@ class YCbCr2RGBDatapath(Module):
 
 
 class YCbCr2RGB(PipelinedActor, Module):
+    """
+    Providing the link of the module with that of the input and output.
+    -------------------------------------------------------------------
+    This will take the input in the form required for the YCbCr2RGB module and 
+    recieve the output from the module and convert it in the required format.
+
+    """
     def __init__(self, ycbcr_w=8, rgb_w=8, coef_w=8):
+        
+        # Providing the link between the module and input and output.
         self.sink = sink = stream.Endpoint(EndpointDescription(ycbcr444_layout(ycbcr_w)))
         self.source = source = stream.Endpoint(EndpointDescription(rgb_layout(rgb_w)))
         PipelinedActor.__init__(self, datapath_latency)
@@ -253,7 +326,10 @@ class YCbCr2RGB(PipelinedActor, Module):
 
         # # #
 
+        # Connecting the datapath with the input and output.
         self.submodules.datapath = YCbCr2RGBDatapath(ycbcr_w, rgb_w, coef_w)
+
+        # Providing input and output to the datapath.
         self.comb += self.datapath.ce.eq(self.pipe_ce)
         for name in ["y", "cb", "cr"]:
             self.comb += getattr(self.datapath.sink, name).eq(getattr(sink, name))

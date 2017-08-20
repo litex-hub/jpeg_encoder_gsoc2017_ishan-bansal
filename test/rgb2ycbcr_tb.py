@@ -7,12 +7,23 @@ from litejpeg.core.csc import rgb2ycbcr_coefs, RGB2YCbCr
 
 from common import *
 
+"""
+This module is made for the testing of the RGB2YCbCr module. For this purpose
+an image is taken and divided into 64*64 blocks extracting RGB for each pixel.
+Than the RGB is than converted into YCbCr matrix and than the matrix again
+converted into RGB matrix and than the image is again constructed and compared
+with the original image to check the correctness for the module.
+
+"""
+
 class TB(Module):
     def __init__(self):
+        # Making pipeline for getting RGB2YCbCr module.
         self.submodules.streamer = PacketStreamer(EndpointDescription([("data", 24)]))
         self.submodules.rgb2ycbcr = RGB2YCbCr()
         self.submodules.logger = PacketLogger(EndpointDescription([("data", 24)]))
 
+        # Combining test bench with the RGB2YCbCr module.
         self.comb += [
         	Record.connect(self.streamer.source, self.rgb2ycbcr.sink, omit=["data"]),
             self.rgb2ycbcr.sink.payload.r.eq(self.streamer.source.data[16:24]),
