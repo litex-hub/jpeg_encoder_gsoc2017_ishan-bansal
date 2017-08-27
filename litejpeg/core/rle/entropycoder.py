@@ -22,18 +22,14 @@ class EntropyDatapath(Module):
     """
     EntropyDatapath :
     ------------------
-    It contains the steps for the EntropyCoder to calculate the bits for the
-    Amplitude to store.
+    Calculate the bit value for the amplitude using EntropyCoder.
 
     Attributes:
     -----------
-    sink : Get the input from the Entrophycoder.
-    source : Give the output to the Entrophycoder.
-    input_data : for temporary storing the value of input, used
-                 for calculating size.
-    get_data : Contains the temporary data for calculating the size.
-    size : The number of bits required for storing th amplitude.
-
+    sink   : Accepts the amplitude from RLEMain to calculate the number of bits
+             required to store the amplitude.
+    source : Give the output to the EntropyCoder depicting the number of bits
+             required to store the amplitude.
     """
     def __init__(self):
 
@@ -74,23 +70,19 @@ class EntropyDatapath(Module):
 
 class EntropyCoder(PipelinedActor, Module):
     """
-    This module will connect the Entropycoder datapath with the input
+    This module will connect the EntropyCoder datapath with the input
     and output either from other modules or from the Test Benches.
     The input is been taken from the sink and source and is been transferred to
-    the Entropycoder datapath by using read and write count.
-    The entrophycoder will extract out the number of bits required to store
+    the EntropyCoder datapath by using read and write count.
+    The EntrophyCoder will extract out the number of bits required to store
     the amplitude.
 
     Attributes :
     ------------
-    sink : 12 bits
-           receives input from the RLEmain containing the amplitude.
-    source : 4 bits
-             transmit the number of bits required to store the amplitude.
-    write_swap, read_swap : 1 bit
-            To transmit the control from read to write or vice-versa in case
-            if one of them completes its execution, that is if all the data is
-            read or all the data is been written on the output.
+    sink   :  12 bits
+              receives input from the RLEmain containing the amplitude.
+    source :  4 bits
+              transmit the number of bits required to store the amplitude.
     """
 
     def __init__(self):
@@ -99,10 +91,12 @@ class EntropyCoder(PipelinedActor, Module):
         self.source = source = stream.Endpoint(EndpointDescription(block_layout(4)))
 
         # Adding PipelineActor to provide additional clock for the module.
+        # This clock is useful to compensate the latency caused by the
+        # datapath to process the first input.
         PipelinedActor.__init__(self, datapath_latency)
         self.latency = datapath_latency
 
-        # Connecting Entropycoder submodule.
+        # Connecting EntropyCoder submodule.
         self.submodules.datapath = EntropyDatapath()
         self.comb += self.datapath.ce.eq(self.pipe_ce)
 

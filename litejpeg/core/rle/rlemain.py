@@ -2,7 +2,7 @@
 RLEMain:
 ---------
 This module is responsible for dividing the input within the RLEcore and
-the Entrophycoder module. The results are than combined and given
+the EntrophyCoder module. The results are then combined and given
 to the output.
 """
 
@@ -26,10 +26,10 @@ class RLEMain(PipelinedActor, Module):
     RLEMain :
     ---------
     This is responsible for combining the outputs of both the EntropyCoder and
-    RLE core as the output will contain the amplitude in the last 12 bits along
+    RLEcore as the output will contain the amplitude in the last 12 bits along
     with the number of bits to store the amplitude as the next 4 bits and
     finally the RunLength for the next 4 bits.
-    All these information is been synchronized once by the RLEmain and than
+    All these information is been synchronized once by the RLEmain and then
     given as an output to the next module.
 
     Attributes :

@@ -11,7 +11,6 @@ required to store all the zeros instead a runlength is
 sufficient for storing all the zeros.
 """
 
-# Importing libraries.
 from litex.gen import *
 from litex.soc.interconnect.stream import *
 
@@ -36,14 +35,14 @@ class RLEDatapath(Module):
     the RLE module to take place.
 
     The input matrix contains two components,
-    the first value of the matrix is called as the DC component and
-    the rest of the values within the matrix are the AC component.
+    * the first value of the matrix is called as the DC component and
+    * the rest of the values within the matrix are the AC component.
 
     The DC part is been encoded by subtracting the DC cofficient to that of
     the DC cofficient of the previous value of the DC matrix.
 
     The AC cofficients are been encoded by calculating the number of zeros
-    before the non-zero AC cofficient called as the Runlength.
+    before the non-zero AC cofficient called as the runlength.
 
     Their is a need of seperate DC/AC cofficients because as the first element
     of the matrix is the DC cofficient so we already know that the
@@ -54,16 +53,7 @@ class RLEDatapath(Module):
 
     Attributes:
     -----------
-    accumulator: Storing the non-zero AC or DC cofficient.
-
-    runlength : for calculating the number of zeros before the non-zero AC
-    cofficients.
-
     dovalid : indicate wheather the output data is valid or not.
-
-    zero_count: Count the number of zeros.
-
-    prev_dc_0 : Storing the previous value of DC component.
 
     sink : To take the input data to the Datapath module.
 
@@ -90,11 +80,11 @@ class RLEDatapath(Module):
         zero_count = Signal(4)
         prev_dc_0 = Signal(12)
 
-        # For calculating the Runlength values.
+        # For calculating the runlength values.
         self.sync += [
 
            If(self.write_cnt == 0,
-              # If the write_cnt is zero than it is the starting of a new data
+              # If the write_cnt is zero then it is the starting of a new data
               # hence the value of the runlength will be zero directly.
               # Since the DC encoding is been done by subtracting
               # the present value with the previous value, hence the
@@ -116,23 +106,23 @@ class RLEDatapath(Module):
                        ).Else(
                           If(self.write_cnt == 63,
                              # If the data is zero and it is the end of the
-                             # matrix than the output is generated to be with
-                             # Amplitude = 0 and Runlength=0 this will
+                             # matrix then the output is generated to be with
+                             # amplitude = 0 and runlength=0 this will
                              # automatically indicate the end of the matrix.
                              accumulator.eq(0),
                              runlength.eq(0),
                              self.dovalid.eq(1)
                              ).Else(
                                   # Otherwise if zero is encountered in between
-                                  # than the only contribution is
+                                  # then the only contribution is
                                   # to increase the count of zero_count by 1.
                                   zero_count.eq(zero_count+1),
                                   self.dovalid.eq(0)))
                     ).Else(
-                       # Else if a non-zero AC cofficient is detected than the
+                       # Else if a non-zero AC cofficient is detected then the
                        # output is been generated with the amplitude equal to
                        # that of the AC cofficient and the number of zeros are
-                       # been indicated as the Runlength.
+                       # been indicated as the runlength.
                        # Making the dvalid to be 1.
                        accumulator.eq(sink.data),
                        runlength.eq(zero_count),
@@ -166,7 +156,7 @@ class RunLength(PipelinedActor, Module):
     and output either from other modules or from the Test Benches.
     The input is been taken from the sink and source and is been
     transferred to the RLE core datapath by using read and write count.
-    The RLEdatapath will than calculate the number of zeros between two
+    The RLEDatapath will than calculate the number of zeros between two
     consecutive non-zero numbers and give the output as runlength.
 
     Attributes :
@@ -178,10 +168,6 @@ class RunLength(PipelinedActor, Module):
              12 bits : amplitude
              4 bits : runlength
              1 bit : data_valid
-    write_swap, read_swap : 1 bit
-            To transmit the control from read to write or vice-versa in case
-            if one of them completes its execution, that is if all the data is
-            read or all the data is been written on the output.
     """
     def __init__(self):
 
@@ -192,6 +178,8 @@ class RunLength(PipelinedActor, Module):
                                    EndpointDescription(block_layout(17)))
 
         # Adding PipelineActor to provide additional clock for the module.
+        # This clock is useful to compensate the latency caused by the
+        # datapath to process the first input.
         PipelinedActor.__init__(self, datapath_latency)
         self.latency = datapath_latency
 
@@ -199,7 +187,6 @@ class RunLength(PipelinedActor, Module):
         self.submodules.datapath = RLEDatapath()
         self.comb += self.datapath.ce.eq(self.pipe_ce)
 
-        # Intialising the variables.
         BLOCK_COUNT = 64
         # Check wheather to start write or not.
         write_sel = Signal()
