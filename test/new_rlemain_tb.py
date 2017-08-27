@@ -20,7 +20,7 @@ class TB(Module):
 
         Logger : It will get the output to the TestBench.
                  Is a 22 bit number.
-                 data[0:12] Amplitude
+                 data[0:12] amplitude
                  data[12:16] Size
                  data[16:20] Runlength
                  data[21] dvalid

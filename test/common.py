@@ -15,9 +15,9 @@ class RAWImage:
     """
     This class particular used for the RGB2YCbCr module as for dividing the image into
     64*64 pixels and getting the values of R, G and B corressponding to each pixel.
-    Than converting the RCG matrix into the YCbCr matrix which are further
+    Then converting the RCG matrix into the YCbCr matrix which are further
     used for the compression.
-    Than again converting the YCbCr to RGB matrix to again convert the new image with
+    Then again converting the YCbCr to RGB matrix to again convert the new image with
     the original image.
 
     """
@@ -363,14 +363,10 @@ class Quantizer:
 
 class RLE:
     """
-    These class is been created in order to store the value or the matrix which
-    are been used to test the RLE module.
-    The matrix input are taken from the github repository with the link as :
-    https://github.com/cfelton/test_jpeg/blob/master/test/rle_test_inputs.py
-    for the purpose of input for testing.
-    As the matrix is sent as an input similar to that come from
-    the quantization module so the data is been processed and the output
-    is been compared with the soft version.
+    This class stores the value of the matrixes used to test the RLE module.
+    These matrixes were taken from [`rle_test_inputs.py` in cfelton's test_jpeg code]
+    (https://github.com/cfelton/test_jpeg/blob/master/test/rle_test_inputs.py).
+    The matrix is an example of what the quantization module might produce.
     """
     def __init__(self):
         self.red_pixels_1 = [
@@ -446,11 +442,9 @@ class RLE:
         self.data = data
         for i in range(64):
             temp=self.data[i]
-            # Since the data we get contains amplitude, runlength as a single
-            # number therefore in order to extracts the two we take the modulus
-            # by 4096 to get last 12 bits as the size of the amplitude is equal
-            # to 12 bits and than shift and than again extracts
-            # the next 4 representing runlength.
+            # The data we get contains amplitude and run length as a single number.
+            # In order to extract the values we use mod 4096 to get the last 12bits
+            # and then shift to extract the next 4 representing the run length.
             amplitude = temp%4096
             temp = temp >> 12
             runlength = temp % 16
@@ -462,11 +456,11 @@ class RLE:
         self.data = data
         for i in range(64):
             temp = self.data[i]
-            # Since the data we get contains amplitude, runlength as a single
-            # number therefore in order to extracts the them we take the modulus
-            # by 4096 to get last 12 bits as the size of the amplitude is 12 bits
-            # and than shift and than again extracts the next 4 representing
-            # runlength, similarly next 4 to get size of the amplitude.
+            # The data we get contains amplitude, run length and size of amplitude
+            # as a single number. In order to extract the values we use mod 4096
+            # to get the last 12bits and then shift to extract the next 4 representing
+            # the run length and further shift and extracts other 4 bits for the
+            # size of the amplitude.
             amplitude = temp%4096
             temp = self.data[i] >> 12
             size = temp%16
