@@ -197,7 +197,9 @@ class RunLength(PipelinedActor, Module):
         # To swap the read_sel.
         read_swap = Signal()
 
-        # To swap the read and write select whenever required.
+        # read_swap and write_swap will keep on changing depending on the value
+        # of the read and write select which further change the states of the FSM
+        # to synchronize between reading and writing input.
         self.sync += [
             If(write_swap,
                write_sel.eq(~write_sel)),
@@ -217,9 +219,10 @@ class RunLength(PipelinedActor, Module):
         # For tracking the data adress.
         self.sync += \
             If(write_clear,
-               write_count.eq(0)
-               ).Elif(write_inc,
-                      write_count.eq(write_count + 1))
+                write_count.eq(0)
+            ).Elif(write_inc,
+                write_count.eq(write_count + 1)
+            )
 
         # To combine the datapath into the module
         self.comb += [
@@ -244,18 +247,20 @@ class RunLength(PipelinedActor, Module):
         WRITE_INPUT State
 
         Will increament the value of the write_count at every positive
-        edge of the clock cycle till 63 and write the data into the memory
+        edge of the clock cycle till BLOCK_COUNT and write the data into the memory
         as per the data from the ``sink.data`` and when the value reaches
-        63 the state again changes to that of the IDLE state.
+        BLOCK_COUNT the state again changes to that of the IDLE state.
         """
         write_fsm.act("WRITE_INPUT",
                       sink.ready.eq(1),
                       If(sink.valid,
                          If(write_count == BLOCK_COUNT-1,
-                            write_swap.eq(1),
-                            NextState("INIT")
-                            ).Else(
-                                   write_inc.eq(1))))
+                             write_swap.eq(1),
+                             NextState("INIT")
+                         ).Else(
+                             write_inc.eq(1)
+                         )
+                      ))
 
         # read path
 
@@ -267,9 +272,9 @@ class RunLength(PipelinedActor, Module):
         # For keeping track of the adress by using the read_count.
         self.sync += \
             If(read_clear,
-               read_count.eq(0)
-               ).Elif(read_inc,
-                      read_count.eq(read_count + 1))
+                read_count.eq(0)
+            ).Elif(read_inc,
+                read_count.eq(read_count + 1))
 
         # Reading the input from the Datapath only when
         # the output data is valid.
@@ -290,14 +295,16 @@ class RunLength(PipelinedActor, Module):
         READ_INPUT state
 
         Will increament the value of the read_count at every positive edge
-        of the clock cycle till 63 and read the data from the memory,
+        of the clock cycle till BLOCK_COUNT and read the data from the memory,
         giving it to the ``source.data`` as input and when the value
-        reaches 63 the state again changes to that of the IDLE state.
+        reaches BLOCK_COUNT the state again changes to that of the IDLE state.
         """
         read_fsm.act("READ_OUTPUT",
                      source.valid.eq(1),
                      source.last.eq(read_count == BLOCK_COUNT-1),
                      If(source.ready,
-                        read_inc.eq(1),
-                        If(source.last,
-                           NextState("INIT"))))
+                         read_inc.eq(1),
+                         If(source.last,
+                             NextState("INIT")
+                         )
+                      ))

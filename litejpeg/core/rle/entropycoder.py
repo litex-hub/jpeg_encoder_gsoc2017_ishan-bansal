@@ -58,10 +58,10 @@ class EntropyDatapath(Module):
         # number of bits required to store the input_data.
         for i in range(12):
             self.sync += get_data[i].eq(input_data >> i)
-        for i in range(12):
+        for i in range(11,-1,-1):
             self.sync += [
-             If(get_data[11-i] == 0,
-                size.eq(11-i))
+             If(get_data[i] == 0,
+                size.eq(i))
             ]
 
         # Connecting the source.data with the output.
@@ -111,7 +111,9 @@ class EntropyCoder(PipelinedActor, Module):
         # To swap the read_sel.
         read_swap = Signal()
 
-        # To swap the read and write select whenever required.
+        # read_swap and write_swap will keep on changing depending on the value
+        # of the read and write select which further change the states of the FSM
+        # to synchronize between reading and writing input.
         self.sync += [
             If(write_swap,
                write_sel.eq(~write_sel)),
@@ -131,9 +133,10 @@ class EntropyCoder(PipelinedActor, Module):
         # For tracking the data adress.
         self.sync += \
             If(write_clear,
-               write_count.eq(0)
-               ).Elif(write_inc,
-                      write_count.eq(write_count + 1))
+                write_count.eq(0)
+            ).Elif(write_inc,
+                write_count.eq(write_count + 1)
+            )
 
         # To combine the datapath into the module
         self.comb += [
@@ -157,20 +160,21 @@ class EntropyCoder(PipelinedActor, Module):
         WRITE_INPUT State
 
         Will increament the value of the write_count at every positive edge
-        of the clock cycle till 63 since we are getting a matrix of 64 blocks
-        hence at write_count equal to 63 it generate a signal saying this to be
+        of the clock cycle till BLOCK_COUNT since we are getting a matrix of 64 blocks
+        hence at write_count equal to BLOCK_COUNT it generate a signal saying this to be
         the last block of the matrix and write the data into the memory
-        as per the data from the ``sink.data`` and when the value reaches 63
+        as per the data from the ``sink.data`` and when the value reaches BLOCK_COUNT
         the state again changes to that of the GET_RESET state.
         """
         write_fsm.act("WRITE_INPUT",
                       sink.ready.eq(1),
                       If(sink.valid,
-                         If(write_count == BLOCK_COUNT-1,
-                            write_swap.eq(1),
-                            NextState("INIT")
-                            ).Else(
-                                   write_inc.eq(1))))
+                          If(write_count == BLOCK_COUNT-1,
+                              write_swap.eq(1),
+                              NextState("INIT")
+                          ).Else(
+                              write_inc.eq(1))
+                      ))
 
         # read path
 
@@ -183,8 +187,9 @@ class EntropyCoder(PipelinedActor, Module):
         self.sync += \
             If(read_clear,
                read_count.eq(0)
-               ).Elif(read_inc,
-                      read_count.eq(read_count + 1))
+            ).Elif(read_inc,
+                read_count.eq(read_count + 1)
+            )
 
         # Reading the input from the Datapath only when the output data is
         # valid.
@@ -198,14 +203,15 @@ class EntropyCoder(PipelinedActor, Module):
                      read_clear.eq(1),
                      If(read_sel == write_sel,
                         read_swap.eq(1),
-                        NextState("READ_OUTPUT")))
+                        NextState("READ_OUTPUT")
+                      ))
 
         """
         READ_INPUT state
 
         Will increament the value of the read_count at every positive edge
-        of the clock cycle till 63 and read the data from the memory, giving
-        it to the ``source.data`` as input and when the value reaches 63 the
+        of the clock cycle till BLOCK_COUNT and read the data from the memory, giving
+        it to the ``source.data`` as input and when the value reaches BLOCK_COUNT the
         state again changes to that of the GET_RESET state.
         """
         read_fsm.act("READ_OUTPUT",
@@ -214,4 +220,6 @@ class EntropyCoder(PipelinedActor, Module):
                      If(source.ready,
             	        read_inc.eq(1),
                         If(source.last,
-                           NextState("INIT"))))
+                           NextState("INIT")
+                        )
+                      ))
