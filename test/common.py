@@ -9,14 +9,15 @@ from litex.soc.interconnect.stream import *
 from model.enc_frame import dct
 from model.enc_frame import zigzag
 from model.enc_frame import quantize
+from model.enc_frame import rle_code
 
 class RAWImage:
     """
     This class particular used for the RGB2YCbCr module as for dividing the image into
     64*64 pixels and getting the values of R, G and B corressponding to each pixel.
-    Than converting the RCG matrix into the YCbCr matrix which are further 
+    Then converting the RCG matrix into the YCbCr matrix which are further
     used for the compression.
-    Than again converting the YCbCr to RGB matrix to again convert the new image with
+    Then again converting the YCbCr to RGB matrix to again convert the new image with
     the original image.
 
     """
@@ -76,7 +77,7 @@ class RAWImage:
 
     def pack_rgb(self):
         """
-        Converting the RGB into the data for the transfer into the 
+        Converting the RGB into the data for the transfer into the
         RGB2YCbCr module.
         """
         self.data = []
@@ -178,8 +179,8 @@ class RAWImage:
 
 class DCTData:
     """
-    This class is been made for the testing of the DCT module. As for this 
-    purpose the input and expected output of the DCT matrix are been taken from 
+    This class is been made for the testing of the DCT module. As for this
+    purpose the input and expected output of the DCT matrix are been taken from
     the reference as follows:
     "http://www.iosrjournals.org/iosr-jece/papers/Vol5-Issue4/H0545156.pdf?id=4310"
     and the same input is given to the reference and the implemented module and
@@ -206,7 +207,7 @@ class DCTData:
                           147, 167, 140, 155, 155, 140, 136, 162,
                           136, 156, 123, 167, 162, 144, 140, 147,
                           148, 155, 136, 155, 152, 147, 147, 136]
-        
+
         # Expected output
         self.output_dct = [186, -18,  15,  -9,   23,  -9, -14, 19,
                             21, -34,  26,  -9,  -11,  11,  14,  7,
@@ -216,10 +217,10 @@ class DCTData:
                              4,  -2, -18,   8,    8,  -4,   1, -7,
                              9,   1,  -3,   4,   -1,  -7,  -1, -2,
                              0,  -8,  -2,   2,    1,   4,  -6,  0]
-        
+
         # Output after passing the input to the reference module.
         self.output_dct_model = dct(self.input_dct)
-        
+
         self.length = ds
         self.width = dw
 
@@ -271,7 +272,7 @@ class DCTData:
 class ZZData:
     """
     In order for the testing purpose ``zigzag_input`` input is been taken
-    to check the functionality of the implemented module by comparing the 
+    to check the functionality of the implemented module by comparing the
     results which we get from both the reference and the implemented
     module.
     """
@@ -293,9 +294,9 @@ class Quantizer:
     "https://www.dfrws.org/sites/default/files/session-files/
     paper-using_jpeg_quantization_tables_to_identify_imagery_processed_by_software.pdf"
     which includes the one for the luminance and other for the chrominium, since the
-    eye are less sensible for the chrominium part, hence contains large values in the 
+    eye are less sensible for the chrominium part, hence contains large values in the
     case of chrominium table which generate more number of zeros in the chrominium part
-    for the purpose of maximum compression without much effect in the quality of the 
+    for the purpose of maximum compression without much effect in the quality of the
     image.
 
     ``quantizer_input`` is taken as a reference for testing the implemented module from
@@ -337,7 +338,7 @@ class Quantizer:
         # Output getting after the quantization module.
         self.quantize_output_ref = quantize(self.quantizer_input,self.quantizer_table)
 
-        self.quantizer_output2_ref = quantize(self.quantizer_input,self.quantizer_cr) 
+        self.quantizer_output2_ref = quantize(self.quantizer_input,self.quantizer_cr)
 
         # Expected output.
         self.quantizer_output = [ -26, -3, -6,  2,  2, -1, 0, 0,
@@ -359,4 +360,112 @@ class Quantizer:
                 self.data[i] = -1*temp;
         print(self.data)
 
-            
+
+class RLE:
+    """
+    This class stores the value of the matrixes used to test the RLE module.
+    These matrixes were taken from [`rle_test_inputs.py` in cfelton's test_jpeg code]
+    (https://github.com/cfelton/test_jpeg/blob/master/test/rle_test_inputs.py).
+    The matrix is an example of what the quantization module might produce.
+    """
+    def __init__(self):
+        self.red_pixels_1 = [
+                        1, 12, 0,  0, 0, 0, 0, 0,
+                        0,  0, 0,  0, 0, 0, 0, 0,
+                        0,  0, 0, 10, 2, 3, 4, 0,
+                        0,  0, 0,  0, 0, 0, 0, 0,
+                        0,  0, 0,  0, 0, 0, 0, 0,
+                        0,  0, 0,  0, 0, 0, 0, 0,
+                        0,  0, 0,  0, 0, 0, 0, 0,
+                        0,  0, 0,  0, 1, 0, 0, 0
+                       ]
+
+
+        self.red_pixels_2 = [
+                        0, 12, 20,  0,  0,   2,   3,  4,
+                        0, 0,  2,  3,  4,   5,   1,  0,
+                        0,  0,  0,  0,  0,   0,  90,  0,
+                        0,  0,  0, 10,  0,   0,   0,  9,
+                        1,  1,  1,  1,  2,   3,   4,  5,
+                        1,  2,  3,  4,  1,   2,   0,  0,
+                        0,  0,  0,  0,  0,   0,   0,  0,
+                        0,  0,  0,  0,  0,   0,   0,  0
+                       ]
+
+        self.green_pixels_1 = [
+                          11, 12, 0,  0, 0, 0, 0, 0,
+                           0,  0, 0,  0, 0, 0, 0, 0,
+                           0,  0, 0, 10, 2, 3, 4, 0,
+                           0,  0, 0,  0, 1, 0, 0, 0,
+                           0,  0, 1,  1, 2, 3, 4, 5,
+                           1,  2, 3,  4, 1, 2, 0, 0,
+                           0,  0, 0,  0, 0, 0, 0, 0,
+                           0,  0, 0,  0, 1, 0, 0, 0
+                         ]
+
+        self.green_pixels_2 = [
+                          13, 12, 20,  0,  0,   0,   0,  0,
+                           0,  0,  0,  0,  0,   0,   0,  0,
+                           0,  0,  0,  0,  0,   0,   0,  0,
+                           0,  0,  0,  0,  0,   0,   0,  0,
+                           0,  0,  0,  0,  0,   0,   0,  0,
+                           0,  0,  0,  0,  0,   0,   0,  0,
+                           0,  0,  0,  0,  0,   0,   0,  1,
+                           1,  0,  0,  0,  1,  32,   4,  2
+                          ]
+
+        self.blue_pixels_1 = [
+                         11, 12, 0,  0, 0, 0, 0, 0,
+                          0,  0, 0,  0, 0, 0, 0, 0,
+                          0,  0, 0,  0, 0, 0, 0, 0,
+                          0,  0, 0,  0, 0, 0, 0, 0,
+                          0,  0, 0,  1, 2, 3, 4, 5,
+                          1,  2, 3,  4, 1, 2, 0, 0,
+                          0,  0, 0,  0, 0, 0, 0, 0,
+                          0,  0, 0,  0, 0, 0, 0, 1
+                        ]
+
+        self.blue_pixels_2 = [
+                         16, 12, 20,  0,  0,   2,   3,  4,
+                          0,  0,  2,  3,  4,   5,   1,  0,
+                          0,  0,  0,  0,  0,   0,  90,  0,
+                          0,  0,  0, 10,  0,   0,   0,  9,
+                          1,  1,  1,  1,  2,   3,   4,  5,
+                          1,  2,  3,  4,  1,   2,   0,  1,
+                          1,  0,  0,  0,  0,   0,   0,  1,
+                          1,  0,  0,  0,  1,  32,   4,  2
+                        ]
+        # Get the output from the reference module.
+        self.output_red_pixels_1 = rle_code(self.red_pixels_1);
+
+    def setdata(self,data):
+        self.data = data
+        for i in range(64):
+            temp=self.data[i]
+            # The data we get contains amplitude and run length as a single number.
+            # In order to extract the values we use mod 4096 to get the last 12bits
+            # and then shift to extract the next 4 representing the run length.
+            amplitude = temp%4096
+            temp = temp >> 12
+            runlength = temp % 16
+            temp = temp >> 4
+            if(temp):
+                print("%s,%s"%(amplitude,runlength))
+
+    def set_rledata(self,data):
+        self.data = data
+        for i in range(64):
+            temp = self.data[i]
+            # The data we get contains amplitude, run length and size of amplitude
+            # as a single number. In order to extract the values we use mod 4096
+            # to get the last 12bits and then shift to extract the next 4 representing
+            # the run length and further shift and extracts other 4 bits for the
+            # size of the amplitude.
+            amplitude = temp%4096
+            temp = self.data[i] >> 12
+            size = temp%16
+            temp = temp >> 4
+            runlength = temp%16
+            temp = temp >> 4
+            if(temp):
+                print("%s,%s,%s"%(amplitude,runlength,size))
