@@ -1,23 +1,21 @@
+# !/usr/bin/env python3
 # This is the module for testing the RLEcore.
 
-# !/usr/bin/env python3
 from litex.gen import *
 
 from litex.soc.interconnect.stream import *
 from litex.soc.interconnect.stream_sim import *
 
 from litejpeg.core.common import *
-from litejpeg.core.rle.rlecore import Runlength
+from litejpeg.core.rle.rlecore import RunLength
 
 from common import *
 
 # Testbanch for the RLEcore module.
 
 """
-Under this module a matrix containing 64 blocks is been sent as an
-input to the RLE core and the output is been printed and compared
-with the one from the reference modules.
-In this way the result from the RLEcore is been verified.
+This module takes a matrix containing 64 blocks of 12 bits each and verifies
+the RLECore produces the same output as the reference data
 """
 class TB(Module):
     def __init__(self):
@@ -32,7 +30,7 @@ class TB(Module):
                  logger[12:16] : Runlength
         """
         self.submodules.streamer = PacketStreamer(EndpointDescription([("data", 12)]))
-        self.submodules.runlength = Runlength()
+        self.submodules.runlength = RunLength()
         self.submodules.logger = PacketLogger(EndpointDescription([("data", 17)]))
 
         # Connecting TestBench with the RLEcore module.

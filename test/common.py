@@ -10,17 +10,15 @@ from model.enc_frame import dct
 from model.enc_frame import zigzag
 from model.enc_frame import quantize
 from model.enc_frame import rle_code
-from model.enc_frame import huffman_ref
 
 class RAWImage:
     """
     This class particular used for the RGB2YCbCr module as for dividing the image into
     64*64 pixels and getting the values of R, G and B corressponding to each pixel.
-    Than converting the RCG matrix into the YCbCr matrix which are further
+    Then converting the RCG matrix into the YCbCr matrix which are further
     used for the compression.
-    Than again converting the YCbCr to RGB matrix to again convert the new image with
+    Then again converting the YCbCr to RGB matrix to again convert the new image with
     the original image.
-
     """
     def __init__(self, coefs, filename=None, size=None):
         self.r = None
@@ -187,15 +185,12 @@ class DCTData:
     and the same input is given to the reference and the implemented module and
     the output is compared with that of the expected output for checking the accuracy
     of the implemented module.
-
     Parameters:
     -----------
     ds : int
     Determine the number of blocks in the matrix.
-
     dw : int
     Determine the number of bits required to store individual value.
-
     """
     def __init__(self,ds,dw):
 
@@ -299,11 +294,9 @@ class Quantizer:
     case of chrominium table which generate more number of zeros in the chrominium part
     for the purpose of maximum compression without much effect in the quality of the
     image.
-
     ``quantizer_input`` is taken as a reference for testing the implemented module from
     ``wikipedia`` along with the expected output i.e. ``qunatizer_output`` for comparing
     with the result we get from the reference and implemented modules.
-
     """
     def __init__(self):
         # Input to the quantization table.
@@ -364,10 +357,10 @@ class Quantizer:
 
 class RLE:
     """
-    These class is been created in order to store the value or the matrix which
-    are been used to test the RLE module.
-    The matrix are from github repositories for the purpose of input for
-    testing.
+    This class stores the value of the matrixes used to test the RLE module.
+    These matrixes were taken from [`rle_test_inputs.py` in cfelton's test_jpeg code]
+    (https://github.com/cfelton/test_jpeg/blob/master/test/rle_test_inputs.py).
+    The matrix is an example of what the quantization module might produce.
     """
     def __init__(self):
         self.red_pixels_1 = [
@@ -382,7 +375,7 @@ class RLE:
                        ]
 
 
-        red_pixels_2 = [
+        self.red_pixels_2 = [
                         0, 12, 20,  0,  0,   2,   3,  4,
                         0, 0,  2,  3,  4,   5,   1,  0,
                         0,  0,  0,  0,  0,   0,  90,  0,
@@ -393,7 +386,7 @@ class RLE:
                         0,  0,  0,  0,  0,   0,   0,  0
                        ]
 
-        green_pixels_1 = [
+        self.green_pixels_1 = [
                           11, 12, 0,  0, 0, 0, 0, 0,
                            0,  0, 0,  0, 0, 0, 0, 0,
                            0,  0, 0, 10, 2, 3, 4, 0,
@@ -404,7 +397,7 @@ class RLE:
                            0,  0, 0,  0, 1, 0, 0, 0
                          ]
 
-        green_pixels_2 = [
+        self.green_pixels_2 = [
                           13, 12, 20,  0,  0,   0,   0,  0,
                            0,  0,  0,  0,  0,   0,   0,  0,
                            0,  0,  0,  0,  0,   0,   0,  0,
@@ -415,7 +408,7 @@ class RLE:
                            1,  0,  0,  0,  1,  32,   4,  2
                           ]
 
-        blue_pixels_1 = [
+        self.blue_pixels_1 = [
                          11, 12, 0,  0, 0, 0, 0, 0,
                           0,  0, 0,  0, 0, 0, 0, 0,
                           0,  0, 0,  0, 0, 0, 0, 0,
@@ -426,7 +419,7 @@ class RLE:
                           0,  0, 0,  0, 0, 0, 0, 1
                         ]
 
-        blue_pixels_2 = [
+        self.blue_pixels_2 = [
                          16, 12, 20,  0,  0,   2,   3,  4,
                           0,  0,  2,  3,  4,   5,   1,  0,
                           0,  0,  0,  0,  0,   0,  90,  0,
@@ -443,27 +436,33 @@ class RLE:
         self.data = data
         for i in range(64):
             temp=self.data[i]
-            Amplitude = temp%4096
+            # The data we get contains amplitude and run length as a single number.
+            # In order to extract the values we use mod 4096 to get the last 12bits
+            # and then shift to extract the next 4 representing the run length.
+            amplitude = temp%4096
             temp = temp >> 12
             runlength = temp % 16
             temp = temp >> 4
             if(temp):
-                print("%s,%s"%(Amplitude,runlength))
+                print("%s,%s"%(amplitude,runlength))
 
     def set_rledata(self,data):
         self.data = data
         for i in range(64):
             temp = self.data[i]
-            Amplitude = temp%4096
+            # The data we get contains amplitude, run length and size of amplitude
+            # as a single number. In order to extract the values we use mod 4096
+            # to get the last 12bits and then shift to extract the next 4 representing
+            # the run length and further shift and extracts other 4 bits for the
+            # size of the amplitude.
+            amplitude = temp%4096
             temp = self.data[i] >> 12
             size = temp%16
             temp = temp >> 4
             runlength = temp%16
             temp = temp >> 4
             if(temp):
-                print("%s,%s,%s"%(Amplitude,runlength,size))
-
-
+                print("%s,%s,%s"%(amplitude,runlength,size))
 
 class Huffman:
     def __init__ (self):

@@ -1,13 +1,13 @@
+# !/usr/bin/env python3
 # This is the module for testing the RLEmain.
 
-# !/usr/bin/env python3
 from litex.gen import *
 
 from litex.soc.interconnect.stream import *
 from litex.soc.interconnect.stream_sim import *
 
 from litejpeg.core.common import *
-from litejpeg.core.rle.rlemain import RLEmain
+from litejpeg.core.rle.rlemain import RLEMain
 
 from common import *
 
@@ -20,13 +20,13 @@ class TB(Module):
 
         Logger : It will get the output to the TestBench.
                  Is a 22 bit number.
-                 data[0:12] Amplitude
+                 data[0:12] amplitude
                  data[12:16] Size
                  data[16:20] Runlength
                  data[21] dvalid
         """
         self.submodules.streamer = PacketStreamer(EndpointDescription([("data", 12)]))
-        self.submodules.rlemain = RLEmain()
+        self.submodules.rlemain = RLEMain()
         self.submodules.logger = PacketLogger(EndpointDescription([("data", 21)]))
 
         # Connecting TestBench with the Entropycoder module.
