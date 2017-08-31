@@ -20,15 +20,15 @@ of 8 bits.
 The module is connected to the other modules containing Huffman Tables which
 are required for the process of encoding the input data.
 This module takes input from the RLE module containing three paramenters:
-1. Amplitude : Non-zero input in the input matrix of the RLE.
-2. Runlength : Number of zeros before the non-zero amplitude.
-3. Size : Number of bits required to store Amplitude.
+1. amplitude : Non-zero input in the input matrix of the RLE.
+2. runlength : Number of zeros before the non-zero amplitude.
+3. size : Number of bits required to store amplitude.
 Each of the output is of 8 bits.
 The main purpose of the module is to serialize the data and encode the data
 using Huffman tables.
 
 Input data format : 20 bits
-input_data[0:12] = Amplitude
+input_data[0:12] = amplitude
 input_data[12:16] = Size
 input_data[16:20] = Runlength
 
@@ -42,7 +42,8 @@ output_data[0:8]
 datapath_latency = 2
 
 
-# Provide an additional clock in the module.
+# Provide an additional clock in the module for synchronizing the input and
+# output data.
 @CEInserter()
 class HuffmanDatapath(Module):
     """ This gives the datapath for the serialization of the input data.
@@ -53,11 +54,11 @@ class HuffmanDatapath(Module):
 
     Parameters:
     ----------
-    Amplitude : 12 bits
+    amplitude : 12 bits
                 Non-zero amplitudes in the matrix.
-    Size      : 4 bits
+    size      : 4 bits
                 Number of bits required to store the amplitude.
-    Runlength : 4 bits
+    runlength : 4 bits
                 Number of zeros before the non-zero amplitude.
     word_count: 6 bits
                 Display the index of the matrix.
@@ -67,7 +68,7 @@ class HuffmanDatapath(Module):
     def __init__(self):
 
         # Getting input from the HuffmanEncoder module.
-        self.Amplitude = Amplitude = Signal(12)
+        self.amplitude = amplitude = Signal(12)
         self.size = size = Signal(4)
         self.runlength = runlength = Signal(4)
         self.word_count = Signal(6)
@@ -81,7 +82,7 @@ class HuffmanDatapath(Module):
         # See wheather the output is ready to process.
         self.ready_data_read = Signal(1)
 
-        # Attaching the AC and DC ROM.
+        # Attaching the AC and DC ROM to get the Encoded values.
         self.submodules.dc_rom_got = dc_rom_core()
         self.submodules.ac_rom_got = ac_rom_core()
 
@@ -159,7 +160,7 @@ class HuffmanDatapath(Module):
         # and size of the amplitude.
         self.comb += [
          [If(j < vli_ext_size,
-             vli_ext[j].eq(self.Amplitude[j]))
+             vli_ext[j].eq(self.amplitude[j]))
              for j in range(12)],
          vli_ext_size.eq(self.size)
         ]
@@ -328,13 +329,15 @@ class HuffmanEncoder(PipelinedActor, Module):
     """
     def __init__(self):
 
-        # Connecting the module to the input and the output.
+        # Connecting the module to get the serial input from RLE and than give
+        # the encoded output to the ByteStuffer.
         self.sink = sink = stream.Endpoint(
             EndpointDescription(block_layout(20)))
         self.source = source = stream.Endpoint(
             EndpointDescription(block_layout(9)))
 
-        # Adding PipelineActor to provide additional clock for the module.
+        # Adding PipelineActor to provide additional clock for the module to
+        # provide appropriate delay for taking the input.
         PipelinedActor.__init__(self, datapath_latency)
         self.latency = datapath_latency
 
@@ -342,7 +345,8 @@ class HuffmanEncoder(PipelinedActor, Module):
         self.ready_data_write = Signal()
         self.ready_data_read = Signal()
 
-        # Connecting Huffman Datapath for passing inputs and outputs.
+        # Connecting Huffman Datapath for passing inputs and getting the encoded
+        # output.
         self.submodules.datapath = HuffmanDatapath()
         self.comb += self.datapath.ce.eq(self.pipe_ce)
 
@@ -351,8 +355,10 @@ class HuffmanEncoder(PipelinedActor, Module):
         write_swap = Signal()
         read_sel = Signal(reset=1)
         read_swap = Signal()
+        BLOCK_COUNT = 63
 
-        # To swap the read and write select whenever required.
+        # To swap the read and write select in order to switch within the states
+        # of FSM when the either reading or writing the data is finished.
         self.sync += [
             If(write_swap,
                write_sel.eq(~write_sel)),
@@ -379,7 +385,7 @@ class HuffmanEncoder(PipelinedActor, Module):
         # To combine the datapath into the module
         self.comb += [
             self.ready_data_write.eq(self.datapath.ready_data_write),
-            self.datapath.Amplitude.eq(sink.data[0:12]),
+            self.datapath.amplitude.eq(sink.data[0:12]),
             self.datapath.size.eq(sink.data[12:16]),
             self.datapath.runlength.eq(sink.data[16:20]),
             self.datapath.word_count.eq(write_count)
@@ -403,15 +409,15 @@ class HuffmanEncoder(PipelinedActor, Module):
         WRITE_INPUT State
 
         Will increament the value of the write_count at every positive edge of
-        the clock cycle till 63 and write the data into the memory as per the
-        data from the ``sink.data`` and when the value reaches 63 the state
+        the clock cycle till BLOCK_COUNT and write the data into the memory as per the
+        data from the ``sink.data`` and when the value reaches BLOCK_COUNT the state
         again changes to that of the IDLE state.
         """
         write_fsm.act("WRITE_INPUT",
                       If(self.ready_data_write,
                          sink.ready.eq(1),
                          If(sink.valid,
-                            If(write_count == 63,
+                            If(write_count == BLOCK_COUNT,
                                write_swap.eq(1),
                                NextState("GET_RESET"))
                             .Else(
@@ -457,14 +463,14 @@ class HuffmanEncoder(PipelinedActor, Module):
         READ_INPUT state
 
         Will increament the value of the read_count at every positive edge of
-        the clock cycle till 63 and read the data from the memory, giving it to
-        the ``source.data`` as input and when the value reaches 63 the state
+        the clock cycle till BLOCK_COUNT and read the data from the memory, giving it to
+        the ``source.data`` as input and when the value reaches BLOCK_COUNT the state
         again changes to that of the IDLE state.
         """
         read_fsm.act("READ_OUTPUT",
                      If(self.ready_data_read,
                         source.valid.eq(1),
-                        source.last.eq(read_count == 63),
+                        source.last.eq(read_count == BLOCK_COUNT),
                         If(source.ready,
                            read_inc.eq(1),
                            If(source.last,

@@ -1,6 +1,6 @@
+# !/usr/bin/env python3
 # This is the module for testing the Huffman Encoder.
 
-# !/usr/bin/env python3
 from litex.gen import *
 
 from litex.soc.interconnect.stream import *
@@ -13,10 +13,8 @@ from common import *
 
 # Testbanch for the Huffman module.
 """
-Under this module a matrix containing 64 blocks is been sent as an
-input to the Huffman and the output is been printed and compared
-with the one from the reference modules.
-In this way the result from the Huffman is been verified.
+This module takes a matrix containing 64 blocks of 12 bits each and verifies
+the RLECore produces the same output as the reference data
 """
 class TB(Module):
     def __init__(self):
@@ -24,9 +22,9 @@ class TB(Module):
         """
         Streamer : It will pass the input to the Huffman.
                    The data is a 20 bit number in the matrix.
-                   Streamer[0:12] = Amplitude
-                   Streamer[12:16] = Size of the Amplitude
-                   Streamer[16:20] = Runlength
+                   Streamer[0:12] = amplitude
+                   Streamer[12:16] = size of the amplitude
+                   Streamer[16:20] = runlength
 
         Logger : It will get the output to the TestBench.
                  The output of the HuffmanEncoder is of 9 bits
