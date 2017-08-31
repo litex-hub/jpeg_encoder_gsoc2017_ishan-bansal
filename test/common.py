@@ -19,6 +19,7 @@ class RAWImage:
     used for the compression.
     Then again converting the YCbCr to RGB matrix to again convert the new image with
     the original image.
+
     """
     def __init__(self, coefs, filename=None, size=None):
         self.r = None
@@ -185,12 +186,15 @@ class DCTData:
     and the same input is given to the reference and the implemented module and
     the output is compared with that of the expected output for checking the accuracy
     of the implemented module.
+
     Parameters:
     -----------
     ds : int
     Determine the number of blocks in the matrix.
+
     dw : int
     Determine the number of bits required to store individual value.
+
     """
     def __init__(self,ds,dw):
 
@@ -294,9 +298,11 @@ class Quantizer:
     case of chrominium table which generate more number of zeros in the chrominium part
     for the purpose of maximum compression without much effect in the quality of the
     image.
+
     ``quantizer_input`` is taken as a reference for testing the implemented module from
     ``wikipedia`` along with the expected output i.e. ``qunatizer_output`` for comparing
     with the result we get from the reference and implemented modules.
+
     """
     def __init__(self):
         # Input to the quantization table.

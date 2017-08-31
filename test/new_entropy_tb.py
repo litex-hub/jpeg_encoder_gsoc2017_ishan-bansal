@@ -1,13 +1,13 @@
+# !/usr/bin/env python3
 # This is the module for testing the Entropycoder.
 
-# !/usr/bin/env python3
 from litex.gen import *
 
 from litex.soc.interconnect.stream import *
 from litex.soc.interconnect.stream_sim import *
 
 from litejpeg.core.common import *
-from litejpeg.core.rle.entropycoder import Entropycoder
+from litejpeg.core.rle.entropycoder import EntropyCoder
 
 from common import *
 
@@ -22,7 +22,7 @@ class TB(Module):
                  Is a 4 bit number.
         """
         self.submodules.streamer = PacketStreamer(EndpointDescription([("data", 12)]))
-        self.submodules.entropycoder = Entropycoder()
+        self.submodules.entropycoder = EntropyCoder()
         self.submodules.logger = PacketLogger(EndpointDescription([("data", 4)]))
 
         # Connecting TestBench with the Entropycoder module.

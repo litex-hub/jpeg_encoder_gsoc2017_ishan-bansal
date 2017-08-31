@@ -28,13 +28,17 @@ ds = 64
 
 omit_table = ["dct_" + str(i) for i in range(ds)]
 
+
 class TB(Module):
     def __init__(self):
 
-        # Attaching input and output of the test bench with that of the DCT module.
-        self.submodules.streamer = PacketStreamer(EndpointDescription( [("data", dw)] ))
+        # Attaching input and output of the test bench
+        # with that of the DCT module.
+        self.submodules.streamer = PacketStreamer(
+                                       EndpointDescription([("data", dw)]))
         self.submodules.DCT = DCT()
-        self.submodules.logger = PacketLogger(EndpointDescription( [("data", dw)]))
+        self.submodules.logger = PacketLogger(
+                                     EndpointDescription([("data", dw)]))
 
         self.comb += [
             Record.connect(self.streamer.source, self.DCT.sink, omit=["data"]),
@@ -50,7 +54,7 @@ class TB(Module):
 def main_generator(dut):
 
     # DCT module input and output testing
-    model =  DCTData(ds,dw)
+    model = DCTData(ds, dw)
     print("\n")
     print("Input data to the DCT Module")
     print(model.input_dct)
@@ -59,11 +63,10 @@ def main_generator(dut):
     print(model.output_dct)
     print("\n")
     print("Output data by the DCT Module")
-    print(model.output_dct_model) 
-
+    print(model.output_dct_model)
 
     # Implementation on Hardware.
-    model2 = DCTData(ds,dw)
+    model2 = DCTData(ds, dw)
     packet = Packet(model2.input_dct)
     for i in range(3):
         dut.streamer.send(packet)
@@ -71,6 +74,7 @@ def main_generator(dut):
     print("\n")
     print("Output of the DCT Module Implemented:")
     model2.setdata(dut.logger.packet)
+
 
 # Getting the main function.
 if __name__ == "__main__":
