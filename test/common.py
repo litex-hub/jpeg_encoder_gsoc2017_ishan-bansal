@@ -472,6 +472,12 @@ class RLE:
 
 class Huffman:
     def __init__ (self):
+        """
+        This class stores the value of the matrixes used to test the Huffman module.
+        These matrixes were taken from [`huffman_test_inputs.py` in cfelton's test_jpeg code]
+        (https://github.com/cfelton/test_jpeg/blob/master/test/huff_test_inputs.py).
+        The matrix is an example of what the quantization module might produce.
+        """
         self.vli_test_y = [
                  10, 1, 2, 4, 8, 16, 32, 65,
                  128, 256, 1000, 1, 2, 4, 8, 16,
@@ -582,6 +588,12 @@ class Huffman:
         self.data3 = data3
         self.data = []
         for i in range(64):
+            # The data we get contains amplitude, run length and size of amplitude
+            # as three independent variables. In order to combine the values we put
+            # runlength = data[16:20]
+            # size = data[12:16]
+            # amplitude = data[0:12]
+            # Hence give data as the output.
             data = (self.data3[i] & 0xff) << 16
             data |= (self.data2[i] & 0xff) << 12
             data |= (self.data1[i] & 0xff) << 0
@@ -589,9 +601,13 @@ class Huffman:
         return(self.data)
 
     def reference_module(self, runlength_block, size_block, amplitude_block):
+        # Get the output from the reference module.
         return(huffman_ref(runlength_block, size_block, amplitude_block))
 
     def set_data(self,data):
+        # The data we get contains encoded output and data valid as a single number.
+        # In order to extract the values we use mod 256 to get the last 8 bits
+        # and then shift to extract the next 1 representing the data valid.
         self.data = data
         get_output = []
         for i in range(len(data)):

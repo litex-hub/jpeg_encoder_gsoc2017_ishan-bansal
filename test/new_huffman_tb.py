@@ -10,16 +10,16 @@ from litejpeg.core.common import *
 from litejpeg.core.huffman.huffmancore import HuffmanEncoder
 
 from common import *
-
-# Testbanch for the Huffman module.
 """
+Testbanch for the Huffman module.
 This module takes a matrix containing 64 blocks of 12 bits each and verifies
-the RLECore produces the same output as the reference data
+the RLECore produces the same output as the reference data.
 """
 class TB(Module):
     def __init__(self):
-        # Making pipeline and the getting the Huffman module.
         """
+        Making pipeline and the getting the Huffman module.
+
         Streamer : It will pass the input to the Huffman.
                    The data is a 20 bit number in the matrix.
                    Streamer[0:12] = amplitude

@@ -1,19 +1,6 @@
 """
- HuffmanEncoder Module
- This contains the top module for the Huffman Encoder
- """
-
-# Import libraries
-from litex.gen import *
-from litex.soc.interconnect.stream import *
-
-from litejpeg.core.common import *
-from litejpeg.core.huffman.ac_rom import ac_rom_core
-from litejpeg.core.huffman.dc_rom import dc_rom_core
-
-"""
-HuffmanEncoder Module :
-
+HuffmanEncoder Module:
+----------------------
 The module takes an input in the form of matrix containing 64 blocks with
 20 bits each and give an output of variable number each having a bit_length
 of 8 bits.
@@ -26,6 +13,8 @@ This module takes input from the RLE module containing three paramenters:
 Each of the output is of 8 bits.
 The main purpose of the module is to serialize the data and encode the data
 using Huffman tables.
+The advantages of the encoding scheme is that boundaries between characters
+are easily determined, and the pattern used for each character is fixed and universal.
 
 Input data format : 20 bits
 input_data[0:12] = amplitude
@@ -35,6 +24,14 @@ input_data[16:20] = Runlength
 Output data format: 8 bits
 output_data[0:8]
 """
+
+from litex.gen import *
+from litex.soc.interconnect.stream import *
+
+from litejpeg.core.common import *
+from litejpeg.core.huffman.ac_rom import ac_rom_core
+from litejpeg.core.huffman.dc_rom import dc_rom_core
+
 
 # This is introduced to provide delay in the module for stablizing the
 # input coming from the other modules.
@@ -82,7 +79,8 @@ class HuffmanDatapath(Module):
         # See wheather the output is ready to process.
         self.ready_data_read = Signal(1)
 
-        # Attaching the AC and DC ROM to get the Encoded values.
+        # Attaching the AC and DC ROM to get the Encoded values in order to get
+        # the encoded values.
         self.submodules.dc_rom_got = dc_rom_core()
         self.submodules.ac_rom_got = ac_rom_core()
 
@@ -97,7 +95,7 @@ class HuffmanDatapath(Module):
         state = Signal(3)
         # Become high when the write_count = 1
         first_rle_word = Signal(1)
-        # To provide delay in the IDLE state.
+        # To provide delay in the IDLE state for synchronization.
         delay = Signal(2)
         # Decide wheather IDLE state is ready to work.
         ready_one = Signal(1)
@@ -126,7 +124,7 @@ class HuffmanDatapath(Module):
         vlc_d = Array(Signal() for i in range(16))
         vlc_size_d = Signal(5)
 
-        # Get the output from the Amplitude and Number of bits required
+        # Get the output from the amplitude and number of bits required
         # to store the amplitude.
         # Providing delay to the output for providing synchronization.
         vli_ext = Array(Signal() for i in range(16))
@@ -326,6 +324,7 @@ class HuffmanEncoder(PipelinedActor, Module):
     20 bits and the output is been sent by using 'source' with 9 bits.
     The input and the output are been synchronized by using the ready_data_read
     and ready_data_write.
+    The ouput given out of this module is of serial form.
     """
     def __init__(self):
 
@@ -350,7 +349,7 @@ class HuffmanEncoder(PipelinedActor, Module):
         self.submodules.datapath = HuffmanDatapath()
         self.comb += self.datapath.ce.eq(self.pipe_ce)
 
-        # Intialising the variables.
+
         write_sel = Signal()
         write_swap = Signal()
         read_sel = Signal(reset=1)
@@ -392,14 +391,14 @@ class HuffmanEncoder(PipelinedActor, Module):
         ]
 
         """
-        GET_RESET.
+        INIT
 
         Depending on the value of the read_sel and write_sel decide wheather
         the next state will be either read or write.
         Will clear the value of ``write_count`` to be 0.
         """
-        self.submodules.write_fsm = write_fsm = FSM(reset_state="GET_RESET")
-        write_fsm.act("GET_RESET",
+        self.submodules.write_fsm = write_fsm = FSM(reset_state="INIT")
+        write_fsm.act("INIT",
                       write_clear.eq(1),
                       self.ready_data_write.eq(1),
                       If(write_sel != read_sel,
@@ -419,7 +418,7 @@ class HuffmanEncoder(PipelinedActor, Module):
                          If(sink.valid,
                             If(write_count == BLOCK_COUNT,
                                write_swap.eq(1),
-                               NextState("GET_RESET"))
+                               NextState("INIT"))
                             .Else(
                                   write_inc.eq(1)
                                   )))
@@ -429,8 +428,6 @@ class HuffmanEncoder(PipelinedActor, Module):
                           ))
 
         # read path
-
-        # Intialising the values.
         read_clear = Signal()
         read_inc = Signal()
         read_count = Signal(6)
@@ -451,9 +448,9 @@ class HuffmanEncoder(PipelinedActor, Module):
                 source.data[8].eq(self.datapath.ready_data_read))
         ]
 
-        # GET_RESET state
-        self.submodules.read_fsm = read_fsm = FSM(reset_state="GET_RESET")
-        read_fsm.act("GET_RESET",
+        # INIT state
+        self.submodules.read_fsm = read_fsm = FSM(reset_state="INIT")
+        read_fsm.act("INIT",
                      read_clear.eq(1),
                      self.ready_data_read.eq(1),
                      If(read_sel == write_sel,
@@ -474,7 +471,7 @@ class HuffmanEncoder(PipelinedActor, Module):
                         If(source.ready,
                            read_inc.eq(1),
                            If(source.last,
-                              NextState("GET_RESET"))))
+                              NextState("INIT"))))
                      .Else(
                            source.valid.eq(0),
                            read_inc.eq(0)
