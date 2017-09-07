@@ -10,6 +10,7 @@ from litejpeg.core.common import *
 from litejpeg.core.huffman.huffmancore import HuffmanEncoder
 
 from common import *
+
 """
 Testbanch for the Huffman module.
 This module takes a matrix containing 64 blocks of 12 bits each and verifies

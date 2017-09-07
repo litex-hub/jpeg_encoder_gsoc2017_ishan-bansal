@@ -1,18 +1,23 @@
-"""
-HuffmanEncoder Module:
-----------------------
+"""HuffmanEncoder Module:
+   ----------------------
+
 The module takes an input in the form of matrix containing 64 blocks with
 20 bits each and give an output of variable number each having a bit_length
 of 8 bits.
+
 The module is connected to the other modules containing Huffman Tables which
 are required for the process of encoding the input data.
-This module takes input from the RLE module containing three paramenters:
-1. amplitude : Non-zero input in the input matrix of the RLE.
-2. runlength : Number of zeros before the non-zero amplitude.
-3. size : Number of bits required to store amplitude.
+
+This module takes input from the RLE module containing three parameters:
+  1. amplitude : Non-zero input in the input matrix of the RLE.
+  2. runlength : Number of zeros before the non-zero amplitude.
+  3. size : Number of bits required to store amplitude.
+
 Each of the output is of 8 bits.
+
 The main purpose of the module is to serialize the data and encode the data
 using Huffman tables.
+
 The advantages of the encoding scheme is that boundaries between characters
 are easily determined, and the pattern used for each character is fixed and universal.
 
@@ -22,7 +27,7 @@ input_data[12:16] = Size
 input_data[16:20] = Runlength
 
 Output data format: 8 bits
-output_data[0:8]
+output_data[0:8] : encoded data using huffman tables
 """
 
 from litex.gen import *
@@ -81,8 +86,8 @@ class HuffmanDatapath(Module):
 
         # Attaching the AC and DC ROM to get the Encoded values in order to get
         # the encoded values.
-        self.submodules.dc_rom_got = dc_rom_core()
-        self.submodules.ac_rom_got = ac_rom_core()
+        self.submodules.dc_rom = dc_rom_core()
+        self.submodules.ac_rom = ac_rom_core()
 
         # Maximum number of words in word_reg.
         # 16 from this cycle.
@@ -144,13 +149,13 @@ class HuffmanDatapath(Module):
         # For extracting the information out of the HuffmanEncoder Tables.
         self.comb += [
 
-         self.dc_rom_got.address.eq(self.size),
-         vlc_dc_size.eq(self.dc_rom_got.data_out_size),
-         vlc_dc.eq(self.dc_rom_got.data_out_code),
-         self.ac_rom_got.address1.eq(self.size),
-         self.ac_rom_got.address2.eq(self.runlength),
-         vlc_ac_size.eq(self.ac_rom_got.data_out_size),
-         vlc_ac.eq(self.ac_rom_got.data_out_code)
+         self.dc_rom.address.eq(self.size),
+         vlc_dc_size.eq(self.dc_rom.data_out_size),
+         vlc_dc.eq(self.dc_rom.data_out_code),
+         self.ac_rom.address1.eq(self.size),
+         self.ac_rom.address2.eq(self.runlength),
+         vlc_ac_size.eq(self.ac_rom.data_out_size),
+         vlc_ac.eq(self.ac_rom.data_out_code)
 
         ]
 
@@ -196,26 +201,25 @@ class HuffmanDatapath(Module):
 
          If(hfw_running,
             If(num_fifo_wrs == 0,
-               self.ready_data_read.eq(0))
-            .Else(
-               If(fifo_wrt_cnt == num_fifo_wrs,
-                  self.ready_data_read.eq(0))
-               .Else(
-                     fifo_wrt_cnt.eq(fifo_wrt_cnt+1),
-                     self.ready_data_read.eq(1)
-               )
-             )),
+               self.ready_data_read.eq(0)
+               ).Else(
+                   If(fifo_wrt_cnt == num_fifo_wrs,
+                      self.ready_data_read.eq(0)
+                      ).Else(
+                         fifo_wrt_cnt.eq(fifo_wrt_cnt+1),
+                         self.ready_data_read.eq(1)
+                   ))),
          If(fifo_wrt_cnt == 0,
             [self.source.data[i].eq(
-                    word_reg[width_word-8+i]) for i in range(8)])
-         .Elif(fifo_wrt_cnt == 1,
-               [self.source.data[i].eq(
-                    word_reg[width_word-16+i]) for i in range(8)])
-         .Else(
-               self.source.data.eq(0)),
+                    word_reg[width_word-8+i]) for i in range(8)]
+            ).Elif(fifo_wrt_cnt == 1,
+                  [self.source.data[i].eq(
+                       word_reg[width_word-16+i]) for i in range(8)]
+            ).Else(
+                  self.source.data.eq(0)),
 
          If(pad_reg == 1,
-            self.source.data.eq(pad_byte))
+             self.source.data.eq(pad_byte))
 
         ]
 
@@ -317,15 +321,19 @@ class HuffmanDatapath(Module):
 
 
 class HuffmanEncoder(PipelinedActor, Module):
+
     """
     This Module defines the main module for getting the input and output to the
     HuffmanDatapath from the other module.
+
     The input is been taken from the 'sink' with the Endstream of length
     20 bits and the output is been sent by using 'source' with 9 bits.
     The input and the output are been synchronized by using the ready_data_read
     and ready_data_write.
+
     The ouput given out of this module is of serial form.
     """
+
     def __init__(self):
 
         # Connecting the module to get the serial input from RLE and than give
