@@ -9,8 +9,10 @@ class dc_rom_core(Module):
         self.address = Signal(4)
         self.data_out_size = Signal(4)
         self.data_out_code = Signal(16)
-        code, size = build_huffman_rom_tables(
-        '/home/ishan/gsoc/environment/litejpeg-master/litejpeg/core/huffman/dc_rom.csv')
+
+        HUFFMAN_DIR = os.path.dirname(os.path.abspath(__file__))
+        HUFFMAN_CSV = os.path.join(HUFFMAN_DIR, 'dc_rom.csv')
+        code, size = build_huffman_rom_tables(HUFFMAN_CSV)
 
         rom_code_size = len(code)
         for i in range(rom_code_size):
@@ -30,8 +32,8 @@ class dc_rom_core(Module):
 
         self.sync += raddr.eq(self.address)
         self.comb += [
-        rom_code_port.adr.eq(raddr),
-        self.data_out_code.eq(rom_code_port.dat_r),
-        rom_size_port.adr.eq(raddr),
-        self.data_out_size.eq(rom_size_port.dat_r)
+            rom_code_port.adr.eq(raddr),
+            self.data_out_code.eq(rom_code_port.dat_r),
+            rom_size_port.adr.eq(raddr),
+            self.data_out_size.eq(rom_size_port.dat_r)
         ]

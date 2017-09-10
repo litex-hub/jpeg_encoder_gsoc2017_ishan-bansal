@@ -1,3 +1,9 @@
+# AC_CR_ROM
+# This module contains the encoded data for encoding the output from the RLE 
+# module after processing the chrominance modules made during the time of DCT
+# and putting into a form which is universal and more general.
+# These values are stored in the ROM as they remain the same throughout the
+# process and are only required for the purspose of reading to form Huffman tables.
 0b1010,4
 0b00,2
 0b01,2

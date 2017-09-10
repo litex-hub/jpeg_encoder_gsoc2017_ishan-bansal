@@ -3,6 +3,7 @@ import numpy as np
 from itertools import groupby,chain
 import math
 import csv
+import os
 
 def readRgbImageBlocks(name):
     arr = np.array(Image.open(name))
@@ -175,8 +176,10 @@ def build_huffman_rom_tables(csvfile):
     with open(csvfile, 'r') as csvfp:
         csvreader = csv.reader(csvfp, delimiter=',')
         for row in csvreader:
-            code.append(row[0])
-            size.append(row[1])
+            check_comment = str(row[0])
+            if(check_comment[0]!='#'):
+                code.append(row[0])
+                size.append(row[1])
     code = tuple(code)
     size = tuple(size)
     return code, size
@@ -199,10 +202,13 @@ def huffman_ref(
         runlength_block, size_block, amplitude_block):
     """reference model for huffman encoder"""
 
-    size_ac, code_ac = table_huff_gen(
-        '/home/ishan/gsoc/environment/litejpeg-master/litejpeg/core/huffman/ac_rom.csv', 2)
-    size_dc, code_dc = table_huff_gen(
-        '/home/ishan/gsoc/environment/litejpeg-master/litejpeg/core/huffman/dc_rom.csv', 10)
+    HUFFMAN_DIR = os.path.dirname(os.path.abspath(__file__))
+
+    HUFFMAN_CSV_AC = os.path.join(HUFFMAN_DIR, '../../litejpeg/core/huffman/ac_rom.csv')
+    size_ac, code_ac = table_huff_gen(HUFFMAN_CSV_AC, 2)
+
+    HUFFMAN_CSV_DC = os.path.join(HUFFMAN_DIR, '../../litejpeg/core/huffman/dc_rom.csv')
+    size_dc, code_dc = table_huff_gen(HUFFMAN_CSV_DC, 10)
 
     for i in range(64):
 
