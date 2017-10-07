@@ -12,7 +12,7 @@ from litejpeg.core.huffman.huffmancore import HuffmanEncoder
 from common import *
 
 """
-Testbanch for the Huffman module.
+Testbench for the Huffman module.
 This module takes a matrix containing 64 blocks of 12 bits each and verifies
 the RLECore produces the same output as the reference data.
 """
@@ -74,9 +74,11 @@ if __name__ == "__main__":
     tb = TB()
     generators = {"sys" : [main_generator(tb)]}
     generators = {
-        "sys" :   [main_generator(tb),
-                   tb.streamer.generator(),
-                   tb.logger.generator()]
+        "sys" : [
+            main_generator(tb),
+            tb.streamer.generator(),
+            tb.logger.generator()
+        ]
     }
     clocks = {"sys": 10}
     run_simulation(tb, generators, clocks, vcd_name="sim.vcd")

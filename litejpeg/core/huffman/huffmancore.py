@@ -182,142 +182,149 @@ class HuffmanDatapath(Module):
 
         # Calculating the number of blocks to go as output.
         self.comb += [
-         num_fifo_wrs.eq(bit_ptr[3:5])
+            num_fifo_wrs.eq(bit_ptr[3:5])
         ]
 
         # providing delay in order to synchronize the data.
         self.sync += [
-          [vli_ext_next[i].eq(vli_ext[i]) for i in range(16)],
-          [vli_ext_next_next[i].eq(vli_ext_next[i]) for i in range(16)],
-          [vli_ext_next_next_next[i].eq(
-           vli_ext_next_next[i]) for i in range(16)],
-          vli_ext_size_next.eq(vli_ext_size),
-          vli_ext_size_next_next.eq(vli_ext_size_next),
-          vli_ext_size_next_next_next.eq(vli_ext_size_next_next),
+            [vli_ext_next[i].eq(vli_ext[i]) for i in range(16)],
+            [vli_ext_next_next[i].eq(vli_ext_next[i]) for i in range(16)],
+            [vli_ext_next_next_next[i].eq(
+                vli_ext_next_next[i]) for i in range(16)],
+            vli_ext_size_next.eq(vli_ext_size),
+            vli_ext_size_next_next.eq(vli_ext_size_next),
+            vli_ext_size_next_next_next.eq(vli_ext_size_next_next),
         ]
 
         # Handling FIFO write.
         self.sync += [
-
-         If(hfw_running,
-            If(num_fifo_wrs == 0,
-               self.ready_data_read.eq(0)
-               ).Else(
-                   If(fifo_wrt_cnt == num_fifo_wrs,
-                      self.ready_data_read.eq(0)
-                      ).Else(
-                         fifo_wrt_cnt.eq(fifo_wrt_cnt+1),
-                         self.ready_data_read.eq(1)
-                   ))),
-         If(fifo_wrt_cnt == 0,
-            [self.source.data[i].eq(
+            If(hfw_running,
+                If(num_fifo_wrs == 0,
+                    self.ready_data_read.eq(0)
+                ).Else(
+                    If(fifo_wrt_cnt == num_fifo_wrs,
+                       self.ready_data_read.eq(0)
+                    ).Else(
+                       fifo_wrt_cnt.eq(fifo_wrt_cnt+1),
+                       self.ready_data_read.eq(1)
+                    )
+                )
+            ),
+            If(fifo_wrt_cnt == 0,
+                [self.source.data[i].eq(
                     word_reg[width_word-8+i]) for i in range(8)]
             ).Elif(fifo_wrt_cnt == 1,
-                  [self.source.data[i].eq(
-                       word_reg[width_word-16+i]) for i in range(8)]
+                [self.source.data[i].eq(
+                    word_reg[width_word-16+i]) for i in range(8)]
             ).Else(
-                  self.source.data.eq(0)),
+                self.source.data.eq(0)
+            ),
 
-         If(pad_reg == 1,
-             self.source.data.eq(pad_byte))
+            If(pad_reg == 1,
+                 self.source.data.eq(pad_byte)
+            ),
 
         ]
 
         # State Machine.
         self.sync += [
 
-         # IDLE state
-         If(state == 0,
-            If(self.word_count == 0,
-               first_rle_word.eq(1)),
-            If(delay == 2,
-               state.eq(1),
-               self.ready_data_write.eq(1),
-               ready_one.eq(1))
-            .Else(
-                  delay.eq(delay+1)))
-         # VLC state
-         .Elif(state == 1,
-               If(ready_one,
+            # IDLE state
+            If(state == 0,
+                If(self.word_count == 0,
+                    first_rle_word.eq(1)
+                ),
+                If(delay == 2,
+                    state.eq(1),
+                    self.ready_data_write.eq(1),
+                    ready_one.eq(1)
+                ).Else(
+                    delay.eq(delay+1)
+                ),
+            ).Elif(state == 1,
+                # VLC state
+                If(ready_one,
+                	[If(i < vlc_size_d,
+                        word_reg[width_word-1-bit_ptr-i].eq(
+                            vlc_d[vlc_size_d-1-i]))
+                            for i in range(width_word)],
+                    bit_ptr.eq(bit_ptr + vlc_size_d),
+                    self.ready_data_write.eq(0),
+                    hfw_running.eq(1),
+                    ready_one.eq(0),
+                ).Elif(hfw_running & (
+                        (num_fifo_wrs == 0) | (fifo_wrt_cnt == num_fifo_wrs)),
 
-                  [If(i < vlc_size_d,
-                      word_reg[width_word-1-bit_ptr-i].eq(
-                          vlc_d[vlc_size_d-1-i]))
-                      for i in range(width_word)],
-                  bit_ptr.eq(bit_ptr + vlc_size_d),
-                  self.ready_data_write.eq(0),
-                  hfw_running.eq(1),
-                  ready_one.eq(0)
+                        [If(i+(num_fifo_wrs*8) < width_word,
+                            word_reg[width_word-1-i].eq(
+                            word_reg[width_word-1-(num_fifo_wrs*8)-i]))
+                            for i in range(width_word)],
 
-                  ).Elif(hfw_running & (
-                         (num_fifo_wrs == 0) | (fifo_wrt_cnt == num_fifo_wrs)),
+                        bit_ptr.eq(bit_ptr - (num_fifo_wrs*8)),
+                        hfw_running.eq(0),
+                        fifo_wrt_cnt.eq(0),
+                        first_rle_word.eq(0),
+                        state.eq(2),
+                        ready_one.eq(1),
+                ),
+            ).Elif(state == 2,
+                # VLI state
+                If(hfw_running == 0,
 
-                         [If(i+(num_fifo_wrs*8) < width_word,
-                             word_reg[width_word-1-i].eq(
-                                 word_reg[width_word-1-(num_fifo_wrs*8)-i]))
-                             for i in range(width_word)],
+                    [If(i < vli_ext_size_next_next_next,
+                        word_reg[width_word-1-bit_ptr-i].eq(
+                        vli_ext_next_next_next[
+                        vli_ext_size_next_next_next-1-i]))
+                        for i in range(width_word)],
+                    bit_ptr.eq(bit_ptr + vli_ext_size_next_next_next),
+                    hfw_running.eq(1),
 
-                         bit_ptr.eq(bit_ptr - (num_fifo_wrs*8)),
-                         hfw_running.eq(0),
-                         fifo_wrt_cnt.eq(0),
-                         first_rle_word.eq(0),
-                         state.eq(2),
-                         ready_one.eq(1)))
-         # VLI state
-         .Elif(state == 2,
+                ).Elif(hfw_running & (
+                    (num_fifo_wrs == 0) | (
+                    fifo_wrt_cnt == num_fifo_wrs)),
 
-               If(hfw_running == 0,
+                    [If(i+(num_fifo_wrs*8) < width_word,
+                        word_reg[width_word-1-i].eq(
+                        word_reg[width_word-1-(num_fifo_wrs*8)-i]))
+                        for i in range(width_word)],
+                    bit_ptr.eq(bit_ptr - (num_fifo_wrs*8)),
+                    hfw_running.eq(0),
+                    fifo_wrt_cnt.eq(0),
 
-                  [If(i < vli_ext_size_next_next_next,
-                      word_reg[width_word-1-bit_ptr-i].eq(
-                          vli_ext_next_next_next[
-                              vli_ext_size_next_next_next-1-i]))
-                      for i in range(width_word)],
-                  bit_ptr.eq(bit_ptr + vli_ext_size_next_next_next),
-                  hfw_running.eq(1)
+                    # Taking care of the last block.
+                    If(self.word_count == 63,
+                        If((bit_ptr - (num_fifo_wrs*8)) != 0,
+                            state.eq(3),
+                        ).Else(
+                            state.eq(0)),
+                    ).Else(
+                        state.eq(1),
+                        self.ready_data_write.eq(1),
+                    )
+                )
+            ).Else(
+                # Padding state
+                If(hfw_running == 0,
 
-                  ).Elif(hfw_running & (
-                             (num_fifo_wrs == 0) | (
-                                 fifo_wrt_cnt == num_fifo_wrs)),
+                    [(If(i < bit_ptr,
+                            pad_byte[7-i].eq(word_reg[width_word-1-i]),
+                        ).Else(
+                            pad_byte[7-i].eq(1),
+                        )) for i in range(8)],
+                pad_reg.eq(1),
+                bit_ptr.eq(8),
+                hfw_running.eq(1),
+                ).Elif(
+                    hfw_running &
+                        ((num_fifo_wrs == 0) | (fifo_wrt_cnt == num_fifo_wrs)),
 
-                         [If(i+(num_fifo_wrs*8) < width_word,
-                             word_reg[width_word-1-i].eq(
-                             word_reg[width_word-1-(num_fifo_wrs*8)-i]))
-                             for i in range(width_word)],
-                         bit_ptr.eq(bit_ptr - (num_fifo_wrs*8)),
-                         hfw_running.eq(0),
-                         fifo_wrt_cnt.eq(0),
-
-                         # Taking care of the last block.
-                         If(self.word_count == 63,
-                            If((bit_ptr - (num_fifo_wrs*8)) != 0,
-                               state.eq(3))
-                            .Else(
-                                  state.eq(0))
-                            ).Else(
-                                   state.eq(1),
-                                   self.ready_data_write.eq(1))))
-         # Padding state
-         .Else(
-               If(hfw_running == 0,
-
-                  [(If(i < bit_ptr,
-                       pad_byte[7-i].eq(word_reg[width_word-1-i])
-                       ).Else(
-                              pad_byte[7-i].eq(1)
-                     )) for i in range(8)],
-                  pad_reg.eq(1),
-                  bit_ptr.eq(8),
-                  hfw_running.eq(1)
-                  ).Elif(
-                      hfw_running &
-                      ((num_fifo_wrs == 0) | (fifo_wrt_cnt == num_fifo_wrs)),
-
-                      bit_ptr.eq(0),
-                      hfw_running.eq(0),
-                      pad_reg.eq(0),
-                      state.eq(0))
-         )]
+                    bit_ptr.eq(0),
+                    hfw_running.eq(0),
+                    pad_reg.eq(0),
+                    state.eq(0),
+                )
+            )
+        ]
 
 
 class HuffmanEncoder(PipelinedActor, Module):
