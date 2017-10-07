@@ -1,0 +1,22 @@
+# DC_CR_ROM
+# This module contains the encoded data for encoding the output from the RLE
+# module after processing the luminance modules made during the time of DCT
+# and putting into a form which is universal and more general.
+# The module is developed for the first input data of the matrix as the value of
+# runlength is always 0 corressponding to that input and therefore the input data
+# can goes to 11 for max which is the number of bits required to store the amplitude.
+# These values are stored in the ROM as they remain the same throughout the
+# process and are only required for the purspose of reading to form Huffman tables.
+0,2
+2,3
+3,3
+4,3
+5,3
+6,3
+14,4
+30,5
+62,6
+126,7
+254,8
+510,9
+0,0

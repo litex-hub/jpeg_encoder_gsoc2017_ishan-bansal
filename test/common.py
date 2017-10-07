@@ -469,3 +469,149 @@ class RLE:
             temp = temp >> 4
             if(temp):
                 print("%s,%s,%s"%(amplitude,runlength,size))
+
+class Huffman:
+    def __init__ (self):
+        """
+        This class stores the value of the matrixes used to test the Huffman module.
+        These matrixes were taken from [`huffman_test_inputs.py` in cfelton's test_jpeg code]
+        (https://github.com/cfelton/test_jpeg/blob/master/test/huff_test_inputs.py).
+        The matrix is an example of what the quantization module might produce.
+        """
+        self.vli_test_y = [
+                  10,   1,    2,   4,    8,  16, 32, 65,
+                 128, 256, 1000,   1,    2,   4,  8, 16,
+                  32,  65,  128, 256, 1000,   1,  2,  4,
+                   8,  16,   32,  65,  128, 256,  1,  3,
+                   3,   3,    3,   3,    3,   3,  3,  3,
+                   3,   3,    3,   3,    3,   3,  3,  3,
+                   3,   3,    3,   3,    3,   3,  3,  3,
+                   2,   2,    2,   2,    3,   3,  3,  2,
+                 ]
+
+
+        self.vli_size_test_y = [
+                 4, 1,  2, 3,  4, 5,  6, 7,
+                 8, 9, 10, 1,  2, 3,  4, 5,
+                 6, 7,  8, 9, 10, 1,  2, 3,
+                 4, 5,  6, 7,  8, 9, 10, 2,
+                 2, 2,  2, 2,  2, 2,  2, 2,
+                 2, 2,  2, 2,  2, 2,  2, 2,
+                 2, 2,  2, 2,  2, 2,  2, 2,
+                 1, 1,  1, 1,  2, 2,  2, 1,
+                 ]
+
+        self.runlength_test_y = [
+                 0, 2, 0, 0, 0, 0, 0, 0,
+                 0, 0, 0, 1, 0, 2, 1, 0,
+                 2, 1, 0, 2, 1, 0, 2, 2,
+                 0, 0, 2, 0, 0, 0, 0, 0,
+                 2, 2, 0, 0, 0, 1, 0, 0,
+                 2, 2, 0, 0, 0, 0, 0, 0,
+                 0, 0, 2, 0, 0, 0, 0, 0,
+                 2, 0, 0, 0, 0, 0, 0, 0,
+                 ]
+
+        self.vli_test_cb = [
+                  10,  1,   1,  1,   1,   1, 1,  1,
+                 128,  2,   2,  1,   2,   4, 8, 16,
+                  32, 65, 128,  2,   2,   1, 2,  4,
+                   8, 16,  32, 65, 128, 256, 1,  3,
+                   1,  1,   1,  1,   1,   1, 1,  1,
+                   3,  3,   3,  3,   3,   3, 3,  3,
+                   3,  3,   3,  3,   3,   3, 3,  3,
+                   2,  2,   2,  2,   3,   3, 3,  2,
+                 ]
+
+
+        self.vli_size_test_cb = [
+                 4, 1, 1, 1, 1, 1, 1, 1,
+                 8, 2, 2, 1, 2, 3, 4, 5,
+                 6, 7, 8, 9, 1, 1, 2, 3,
+                 4, 5, 6, 7, 8, 9, 1, 2,
+                 1, 1, 1, 1, 1, 1, 1, 1,
+                 2, 2, 2, 2, 2, 2, 2, 2,
+                 2, 2, 2, 2, 2, 2, 2, 2,
+                 2, 2, 2, 2, 2, 2, 2, 2,
+                 ]
+
+
+        self.runlength_test_cb = [
+                 0, 2, 0, 0, 0, 0, 0, 0,
+                 0, 0, 0, 1, 0, 2, 1, 0,
+                 2, 1, 0, 2, 1, 0, 2, 2,
+                 0, 0, 2, 0, 0, 0, 0, 0,
+                 2, 2, 0, 0, 0, 1, 0, 0,
+                 2, 2, 0, 0, 0, 0, 0, 0,
+                 0, 0, 2, 0, 0, 0, 0, 0,
+                 2, 0, 0, 0, 0, 0, 0, 0,
+                 ]
+
+        self.vli_test_cr = [
+                  10,  1,   2,  2,   2,   2, 2,  2,
+                 128,  2,   2,  1,   2,   4, 8, 16,
+                  32, 65, 128,  2,   2,   1, 2,  4,
+                   8, 16,  32, 65, 128, 256, 1,  3,
+                   2,  2,   2,  2,   2,   2, 2,  2,
+                   3,  3,   3,  3,   3,   3, 3,  3,
+                   3,  3,   3,  3,   3,   3, 3,  3,
+                   2,  2,   2,  2,   3,   3, 3,  2,
+                 ]
+
+
+        self.vli_size_test_cr = [
+                 4, 1, 1, 1, 1, 1, 1, 1,
+                 8, 1, 1, 1, 2, 3, 4, 5,
+                 6, 7, 8, 9, 1, 1, 2, 3,
+                 4, 5, 6, 7, 8, 9, 1, 2,
+                 1, 1, 1, 1, 1, 1, 1, 1,
+                 2, 2, 2, 2, 2, 2, 2, 2,
+                 2, 2, 2, 2, 2, 2, 2, 2,
+                 1, 1, 1, 1, 2, 2, 2, 1,
+                 ]
+
+
+        self.runlength_test_cr = [
+                 0, 2, 0, 0, 0, 0, 0, 0,
+                 0, 0, 0, 1, 0, 2, 1, 0,
+                 2, 1, 0, 2, 1, 0, 2, 2,
+                 0, 0, 2, 0, 0, 0, 0, 0,
+                 2, 2, 0, 0, 0, 1, 0, 0,
+                 2, 2, 0, 0, 0, 0, 0, 0,
+                 0, 0, 2, 0, 0, 0, 0, 0,
+                 2, 0, 0, 0, 0, 0, 0, 0,
+                 ]
+
+    def concat_input(self, data1, data2, data3):
+        self.data1 = data1
+        self.data2 = data2
+        self.data3 = data3
+        self.data = []
+        for i in range(64):
+            # The data we get contains amplitude, run length and size of amplitude
+            # as three independent variables. In order to combine the values we put
+            # runlength = data[16:20]
+            # size = data[12:16]
+            # amplitude = data[0:12]
+            # Hence give data as the output.
+            data = (self.data3[i] & 0xff) << 16
+            data |= (self.data2[i] & 0xff) << 12
+            data |= (self.data1[i] & 0xff) << 0
+            self.data.append(data)
+        return(self.data)
+
+    def reference_module(self, runlength_block, size_block, amplitude_block):
+        # Get the output from the reference module.
+        return(huffman_ref(runlength_block, size_block, amplitude_block))
+
+    def set_data(self,data):
+        # The data we get contains encoded output and data valid as a single number.
+        # In order to extract the values we use mod 256 to get the last 8 bits
+        # and then shift to extract the next 1 representing the data valid.
+        self.data = data
+        get_output = []
+        for i in range(len(data)):
+            temp_data = int(data[i]/256)
+            if(temp_data == 1):
+                get_output.append((data[i]%256))
+        print(get_output)
